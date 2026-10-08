@@ -10,7 +10,10 @@ sequence in the [roadmap](roadmap.md).
 Mnemo separates probabilistic interpretation from deterministic memory management.
 
 ```text
-User capture
+Text / transcribed voice
+   |
+   v
+Capture
    |
    v
 Extractor (LLM or rule based)
@@ -32,12 +35,64 @@ Lifecycle Engine
    v
 Persistence Adapter
    |
+   +--> capture repository
+   +--> atomic lifecycle writes
    +--> structured lookup
    +--> temporal lookup
    +--> semantic index
 ```
 
 The extractor must never write directly to storage.
+
+## Core interface boundaries
+
+Sprint 2 begins with provider-independent contracts; it does not select or
+implement providers or databases.
+
+### Capture
+
+`Capture` preserves the user's raw text, source type (`TEXT` or `VOICE`), user
+scope, and timezone-aware capture/storage times before extraction. A voice
+capture contains its transcript. Raw audio is deleted by default after
+transcription and is not part of the core model.
+
+Capture and Memory remain distinct. One Capture may produce zero, one, or many
+`CandidateMemory` values.
+
+### Extraction
+
+`Extractor` is a minimal synchronous protocol from `Capture` to a sequence of
+`CandidateMemory` values. It interprets language only and has no persistence or
+lifecycle authority. Concrete model/provider integration remains future work.
+
+### Entity resolution
+
+`EntityResolver` resolves one extracted subject or object mention inside an
+explicit user scope. Its result distinguishes a matched entity, an unmatched
+mention that may require later creation, and ambiguity with multiple candidates.
+The resolver does not persist or auto-merge; ADR-006 remains authoritative.
+
+### Persistence
+
+`CaptureRepository` persists and retrieves captures under explicit user scope.
+`MemoryRepository` reads active/user-scoped memory and exposes lifecycle writes
+as atomic operations:
+
+- append a new memory while preserving provenance;
+- supersede an active `CURRENT_STATE` and insert its replacement in one
+  transaction while retaining the historical record;
+- validate an expected status and apply an explicit status transition in one
+  transaction.
+
+A `NOOP` decision performs no repository write. Repository adapters must fail
+closed on cross-user mutation and must not expose another user's record through
+lookup. Concrete storage adapters remain future work.
+
+### Time
+
+`Clock` is an injectable protocol whose `now()` result must be timezone-aware.
+It enables deterministic future temporal orchestration without adding a
+scheduler or forcing existing models to depend on a clock.
 
 ## Domain invariants
 
@@ -94,18 +149,19 @@ Examples:
 
 The persistence layer will scope keys by user.
 
-## Next layers
+## Deferred implementations
 
-Sprint 1 intentionally excludes:
+The current interface layer intentionally excludes:
 
 - LLM provider implementation
 - PostgreSQL adapter
 - pgvector
-- entity merge heuristics
+- concrete entity matching/merge heuristics
 - FastAPI
 - mobile app
 
-Those are added after the domain behavior is covered by deterministic tests.
+These may be added only through later scoped Issues after the contracts and
+domain behavior are reviewed.
 
 Specific future technologies and implementation details remain `TBD` until an
 approved Issue and, when architectural, an accepted decision establish them.
