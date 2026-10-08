@@ -27,9 +27,9 @@ Implemented:
 
 ### Issue #2 — Deterministic lifecycle state machine
 
-Implementation has been pushed to PR #6 and is awaiting final review after the latest defensive fixes.
+Completed and reviewed.
 
-Current intended semantics:
+Final semantics:
 - CURRENT_STATE: append / no-op / supersede
 - FACT: exact duplicate no-op; conflicting values append conservatively
 - PREFERENCE: exact duplicate no-op; other values append
@@ -38,10 +38,19 @@ Current intended semantics:
 - duplicate identity includes object_entity_id
 - reconcile fails closed on cross-user input
 - memory_key is CURRENT_STATE-only
+- CURRENT_STATE reconciliation only considers CURRENT_STATE memories in the same slot
+- DELETED remains reserved for explicit user/privacy deletion
+
+## In progress
+
+### Issue #3 — Canonical scenario fixtures
+
+Next task.
+
+The fixtures should represent reusable consumer-memory sequences and later seed the evaluation dataset.
 
 ## Next
 
-After Issue #2 review:
 1. Issue #3 — Add canonical scenario fixtures
 2. Issue #4 — Tighten CI and quality gates
 3. Merge PR #6 when Sprint 1 is complete
