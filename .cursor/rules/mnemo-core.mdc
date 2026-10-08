@@ -10,9 +10,15 @@ The canonical cross-agent instructions live in @AGENTS.md.
 
 Before making non-trivial changes, read:
 - @AGENTS.md
-- @docs/project-status.md
-- @docs/decisions.md
+- the linked GitHub Issue in full
 - @docs/architecture.md
-- the current sprint spec referenced by project-status
+- @docs/decisions/README.md
+- @docs/product-requirements.md
+- @docs/roadmap.md
+- @docs/project-status.md
+- @docs/development-workflow.md
 
-Do not duplicate architecture rules in this Cursor-only file. If a durable project rule or architectural decision changes, update the shared repo documentation so Cursor, Codex, and future agents receive the same context.
+Follow the source-of-truth order in @AGENTS.md. Do not duplicate architecture
+or product rules in this Cursor-only file. Put durable changes in the shared
+repository documentation so Cursor, Codex, and future agents receive the same
+context.

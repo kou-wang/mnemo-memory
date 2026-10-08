@@ -1,5 +1,10 @@
 # Architecture
 
+This document describes the current system boundaries and invariants. Durable
+rationales live in [accepted decisions](decisions/README.md), established
+product behavior in [product requirements](product-requirements.md), and future
+sequence in the [roadmap](roadmap.md).
+
 ## Boundary
 
 Mnemo separates probabilistic interpretation from deterministic memory management.
@@ -101,3 +106,6 @@ Sprint 1 intentionally excludes:
 - mobile app
 
 Those are added after the domain behavior is covered by deterministic tests.
+
+Specific future technologies and implementation details remain `TBD` until an
+approved Issue and, when architectural, an accepted decision establish them.
