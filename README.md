@@ -20,11 +20,18 @@ Mnemo turns short, natural-language captures into structured personal memories t
 - `EVENT` — append-only history such as workouts or maintenance.
 - `INTENT` — future wants/actions such as shopping, reading, or visiting.
 
-## Sprint 1
+## Project documentation
 
-Sprint 1 establishes the domain model and deterministic lifecycle rules before adding LLM extraction or storage adapters.
+Sprint 1 established the domain model and deterministic lifecycle rules before
+LLM extraction or storage adapters. The shared project context is organized as:
 
-See [docs/architecture.md](docs/architecture.md) and [docs/sprint-1-spec.md](docs/sprint-1-spec.md).
+- [Architecture](docs/architecture.md)
+- [Accepted decisions](docs/decisions/README.md)
+- [Product requirements](docs/product-requirements.md)
+- [Roadmap](docs/roadmap.md)
+- [Project status](docs/project-status.md)
+- [Development workflow](docs/development-workflow.md)
+- [Sprint 1 specification](docs/sprint-1-spec.md)
 
 ## Development
 

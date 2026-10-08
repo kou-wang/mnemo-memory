@@ -2,6 +2,10 @@
 
 This file records durable decisions that future agents should not silently revisit.
 
+See [Architecture](../architecture.md) for the current system shape and
+[Development workflow](../development-workflow.md) for the approval process for
+changing an accepted decision.
+
 ## ADR-001 — Five top-level memory kinds
 
 **Status:** Accepted
