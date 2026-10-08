@@ -68,7 +68,9 @@ class LifecycleEngine:
             MemoryStatus.DELETED,
         }
         if current in terminal:
-            raise LifecycleInvariantError(f"Cannot transition terminal status {current} to {target}")
+            raise LifecycleInvariantError(
+                f"Cannot transition terminal status {current} to {target}"
+            )
 
         if kind == MemoryKind.INTENT:
             allowed = {
