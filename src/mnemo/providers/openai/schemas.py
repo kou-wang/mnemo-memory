@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated, Literal, TypeAlias
+from typing import Literal, TypeAlias
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
@@ -69,10 +69,9 @@ class ObjectValue(_OpenAISchema):
         return self
 
 
-OpenAIValue: TypeAlias = Annotated[
-    TextValue | IntegerValue | NumberValue | BooleanValue | NullValue | ListValue | ObjectValue,
-    Field(discriminator="kind"),
-]
+OpenAIValue: TypeAlias = (
+    TextValue | IntegerValue | NumberValue | BooleanValue | NullValue | ListValue | ObjectValue
+)
 
 
 class OpenAIExtractedCandidate(_OpenAISchema):

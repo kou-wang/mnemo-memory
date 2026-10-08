@@ -8,6 +8,7 @@ from typing import cast
 
 import pytest
 from openai import OpenAI, OpenAIError
+from openai.lib._pydantic import to_strict_json_schema
 from pydantic import ValidationError
 
 from mnemo import CandidateMemory, Capture, MemoryKind, SourceType
@@ -78,6 +79,14 @@ def _object(**fields: object) -> dict[str, object]:
         tagged = _integer(value) if isinstance(value, int) else _text(cast(str, value))
         entries.append({"name": name, "value": tagged})
     return {"kind": "object", "value": entries}
+
+
+def _contains_key(value: object, key: str) -> bool:
+    if isinstance(value, dict):
+        return key in value or any(_contains_key(item, key) for item in value.values())
+    if isinstance(value, list):
+        return any(_contains_key(item, key) for item in value)
+    return False
 
 
 def _candidate(
@@ -169,6 +178,46 @@ def test_maps_nested_json_values_without_provider_objects() -> None:
     result, _ = _extract([provider_candidate])
 
     assert result[0].value == ["bench press", None, {"weight_lb": 185}]
+
+
+def test_openai_strict_schema_uses_supported_union_constructs() -> None:
+    schema = to_strict_json_schema(OpenAIExtractionBatch)
+
+    assert schema["type"] == "object"
+    assert schema["additionalProperties"] is False
+    assert schema["required"] == ["candidates"]
+    assert _contains_key(schema, "anyOf")
+    assert not _contains_key(schema, "oneOf")
+
+    definitions = cast(dict[str, object], schema["$defs"])
+    candidate_schema = cast(dict[str, object], definitions["OpenAIExtractedCandidate"])
+    assert candidate_schema["additionalProperties"] is False
+    assert set(cast(list[str], candidate_schema["required"])) == {
+        "kind",
+        "category",
+        "subject",
+        "predicate",
+        "object",
+        "value",
+        "occurred_at",
+        "valid_from",
+        "valid_until",
+        "expires_at",
+    }
+
+    for name in (
+        "TextValue",
+        "IntegerValue",
+        "NumberValue",
+        "BooleanValue",
+        "NullValue",
+        "ListValue",
+        "ObjectField",
+        "ObjectValue",
+    ):
+        value_schema = cast(dict[str, object], definitions[name])
+        assert value_schema["type"] == "object"
+        assert value_schema["additionalProperties"] is False
 
 
 def test_valid_empty_extraction_returns_zero_candidates() -> None:
