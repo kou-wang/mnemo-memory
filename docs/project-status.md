@@ -12,6 +12,8 @@ Sprint 1 PR: **#6 — merged**
 
 Developer workflow PR: **#8 — merged**
 
+Open PR: **#9 — Sprint 2: define extraction and storage interfaces**
+
 ## Completed
 
 ### Issue #1 — Core domain models
@@ -88,7 +90,7 @@ Scope:
 
 ### Issue #5 — Core interfaces
 
-Implementation complete on `feat/issue-5-core-interfaces`; awaiting review.
+Implementation complete on PR #9; awaiting maintainer review.
 
 Implemented provider-independent contracts for:
 - raw text/voice-transcript Capture provenance
