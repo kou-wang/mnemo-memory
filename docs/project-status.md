@@ -4,15 +4,17 @@ Last updated: 2026-10-08
 
 ## Current phase
 
-**Sprint 2 — Core Interfaces (Issue #5)**
+**Sprint 2 — OpenAI Structured Extraction (Issue #10)**
 
-Working branch: `feat/issue-5-core-interfaces`
+Working branch: `feat/openai-structured-extractor`
 
 Sprint 1 PR: **#6 — merged**
 
 Developer workflow PR: **#8 — merged**
 
-Open PR: **#9 — Sprint 2: define extraction and storage interfaces**
+Core interfaces PR: **#9 — merged**
+
+Issue #10 implementation: **complete; awaiting maintainer review**
 
 ## Completed
 
@@ -86,11 +88,9 @@ Scope:
 - accepted ADR migration to `docs/decisions/`
 - concise pull request template
 
-## In progress
-
 ### Issue #5 — Core interfaces
 
-Implementation complete on PR #9; awaiting maintainer review.
+Completed and reviewed.
 
 Implemented provider-independent contracts for:
 - raw text/voice-transcript Capture provenance
@@ -100,30 +100,44 @@ Implemented provider-independent contracts for:
 - atomic current-state supersession and explicit status transitions
 - injectable timezone-aware clocks
 
-No concrete provider, storage backend, network integration, or lifecycle
-semantic change is included.
+## In progress
+
+### Issue #10 — OpenAI Structured Outputs extractor
+
+Implementation complete; awaiting maintainer review.
+
+Implemented:
+- an optional OpenAI SDK extra isolated under `mnemo.providers.openai`
+- configurable-model Responses API structured parsing
+- strict provider-local DTOs mapped into CandidateMemory values
+- explicit provider, refusal/unparsed-response, and malformed-output failures
+- capture timestamp reference context without wall-clock access
+- network-free extraction tests for the established MVP use cases
+- a deterministic canonical extraction-evaluation seed
+
+The extractor has no persistence, entity-resolution, or lifecycle authority.
+No storage backend or lifecycle semantic change is included.
 
 ## Next
 
-1. Review and merge Issue #5
-2. Later extraction, entity resolution, persistence, retrieval, and evaluation work
+1. Review Issue #10 and its dedicated PR
+2. Later entity resolution, persistence, retrieval, and evaluation work
 3. Consumer/mobile application work
 
 ## Current constraints
 
-Issue #5 defines interfaces only and must not add concrete implementation or
-infrastructure for:
+Issue #10 adds only the first concrete extractor adapter and must not add:
 - FastAPI
 - PostgreSQL / SQLAlchemy
 - pgvector
 - Redis
-- OpenAI SDK
 - React Native / Expo code
 - authentication
 - billing
 - notifications
 - lifecycle semantic changes
-- extraction providers or storage backends
+- repository writes or storage backends
+- entity resolution or lifecycle orchestration
 
 ## Product direction
 

@@ -15,11 +15,15 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+openai = [
+  "openai>=3.26.1,<4",
+]
 dev = [
   "pytest>=8.3",
   "pytest-cov>=5.0",
   "ruff>=0.7",
   "mypy>=1.13",
+  "openai>=3.26.1,<4",
 ]
 
 [tool.hatch.build.targets.wheel]

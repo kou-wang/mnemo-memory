@@ -63,7 +63,23 @@ Capture and Memory remain distinct. One Capture may produce zero, one, or many
 
 `Extractor` is a minimal synchronous protocol from `Capture` to a sequence of
 `CandidateMemory` values. It interprets language only and has no persistence or
-lifecycle authority. Concrete model/provider integration remains future work.
+lifecycle authority.
+
+`OpenAIExtractor` is the first concrete adapter behind this boundary. All SDK,
+Responses API, prompt, and provider response-schema details live under
+`mnemo.providers.openai`; the domain models, lifecycle engine, and
+provider-independent interfaces do not import OpenAI types. The SDK is an
+optional package extra. The adapter uses `responses.parse()` with a strict
+provider-local Pydantic envelope, then maps the parsed DTOs into
+`CandidateMemory` values. The model name is supplied by the caller.
+
+The provider DTO is interpretation output only. The adapter has no repository,
+entity resolver, lifecycle engine, or clock dependency and cannot persist,
+resolve, deduplicate, supersede, delete, expire, complete, or cancel memories.
+Capture `captured_at` is its only reference time; it does not consult the
+machine wall clock. Intent-completion language remains outside this extraction
+schema because `CandidateMemory` cannot represent a lifecycle command without
+conflating it with a new memory.
 
 ### Entity resolution
 
@@ -155,7 +171,7 @@ The persistence layer will scope keys by user.
 
 The current interface layer intentionally excludes:
 
-- LLM provider implementation
+- additional LLM provider implementations
 - PostgreSQL adapter
 - pgvector
 - concrete entity matching/merge heuristics
