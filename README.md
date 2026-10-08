@@ -49,6 +49,28 @@ These are the same gates run by CI on Python 3.11 and 3.12. The lifecycle
 coverage command fails below 90% without imposing that threshold on unrelated
 future packages.
 
+### Optional OpenAI extractor
+
+Install the provider adapter only when needed:
+
+```bash
+pip install -e ".[openai]"
+```
+
+With `OPENAI_API_KEY` configured by the application, inject a Structured
+Outputs-capable model name:
+
+```python
+from mnemo.providers.openai import OpenAIExtractor
+
+extractor = OpenAIExtractor(model="YOUR_STRUCTURED_OUTPUT_MODEL")
+candidates = extractor.extract(capture)
+```
+
+The adapter sends capture text to an external AI provider. It only interprets
+language into candidate memories; persistence, entity resolution, and lifecycle
+mutations remain separate deterministic responsibilities.
+
 The workflow exposes stable `Quality gates (Python 3.11)` and
 `Quality gates (Python 3.12)` checks. Repository administrators must configure
 those checks as required in GitHub branch protection; the workflow itself
