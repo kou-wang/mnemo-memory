@@ -55,6 +55,21 @@ def test_capture_rejects_blank_raw_text() -> None:
         )
 
 
+def test_capture_preserves_raw_text_exactly() -> None:
+    raw_text = "  I parked at A1.\n"
+
+    capture = Capture(
+        user_id="  user-1  ",
+        source_type=SourceType.TEXT,
+        raw_text=raw_text,
+        captured_at=CAPTURED_AT,
+        created_at=CREATED_AT,
+    )
+
+    assert capture.raw_text == raw_text
+    assert capture.user_id == "user-1"
+
+
 @pytest.mark.parametrize("field", ["captured_at", "created_at"])
 def test_capture_rejects_naive_timestamps(field: str) -> None:
     values = {

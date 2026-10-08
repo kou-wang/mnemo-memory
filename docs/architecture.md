@@ -81,12 +81,14 @@ as atomic operations:
 - append a new memory while preserving provenance;
 - supersede an active `CURRENT_STATE` and insert its replacement in one
   transaction while retaining the historical record;
-- validate an expected status and apply an explicit status transition in one
-  transaction.
+- validate an expected status and apply a non-supersession status transition in
+  one transaction.
 
 A `NOOP` decision performs no repository write. Repository adapters must fail
 closed on cross-user mutation and must not expose another user's record through
-lookup. Concrete storage adapters remain future work.
+lookup. Generic status transition operations must reject `SUPERSEDED` because
+supersession requires an atomic replacement-aware operation. Concrete storage
+adapters remain future work.
 
 ### Time
 

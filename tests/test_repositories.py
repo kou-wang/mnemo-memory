@@ -127,6 +127,10 @@ class FakeMemoryRepository:
             raise RepositoryInvariantError("memory was not found for user")
         if memory.status != expected_status:
             raise RepositoryInvariantError("memory status does not match expected_status")
+        if target_status == MemoryStatus.SUPERSEDED:
+            raise RepositoryInvariantError(
+                "SUPERSEDED requires a replacement-aware atomic repository operation"
+            )
         LifecycleEngine().validate_status_transition(
             kind=memory.kind,
             current=memory.status,
@@ -331,6 +335,60 @@ def test_explicit_status_transition_validates_expected_and_current_state() -> No
             target_status=MemoryStatus.CANCELLED,
         )
     assert completed == repository.get(user_id="user-1", memory_id=intent.id)
+
+
+@pytest.mark.parametrize(
+    ("kind", "target_status"),
+    [
+        (MemoryKind.INTENT, MemoryStatus.CANCELLED),
+        (MemoryKind.INTENT, MemoryStatus.EXPIRED),
+        (MemoryKind.INTENT, MemoryStatus.DELETED),
+        (MemoryKind.EVENT, MemoryStatus.EXPIRED),
+        (MemoryKind.EVENT, MemoryStatus.DELETED),
+    ],
+)
+def test_other_valid_non_supersession_transitions_remain_available(
+    kind: MemoryKind,
+    target_status: MemoryStatus,
+) -> None:
+    repository = FakeMemoryRepository()
+    memory = _memory(kind=kind, value="value")
+    repository.append(user_id="user-1", memory=memory)
+    repository.write_operations.clear()
+
+    repository.transition_status(
+        user_id="user-1",
+        memory_id=memory.id,
+        expected_status=MemoryStatus.ACTIVE,
+        target_status=target_status,
+    )
+
+    transitioned = repository.get(user_id="user-1", memory_id=memory.id)
+    assert transitioned is not None
+    assert transitioned.status == target_status
+    assert repository.write_operations == ["transition_status"]
+
+
+def test_generic_superseded_transition_is_rejected_without_mutation() -> None:
+    repository = FakeMemoryRepository()
+    current = _memory(
+        kind=MemoryKind.CURRENT_STATE,
+        value="A1",
+        predicate="parked_at",
+    )
+    repository.append(user_id="user-1", memory=current)
+    repository.write_operations.clear()
+
+    with pytest.raises(RepositoryInvariantError, match="replacement-aware"):
+        repository.transition_status(
+            user_id="user-1",
+            memory_id=current.id,
+            expected_status=MemoryStatus.ACTIVE,
+            target_status=MemoryStatus.SUPERSEDED,
+        )
+
+    assert repository.get(user_id="user-1", memory_id=current.id) == current
+    assert repository.write_operations == []
 
 
 def test_atomic_mutations_reject_cross_user_scope_without_changes() -> None:

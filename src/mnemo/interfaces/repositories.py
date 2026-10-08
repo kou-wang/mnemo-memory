@@ -80,10 +80,13 @@ class MemoryRepository(Protocol):
         expected_status: MemoryStatus,
         target_status: MemoryStatus,
     ) -> None:
-        """Atomically validate expected status and apply an explicit transition.
+        """Atomically apply an explicit non-supersession status transition.
 
         Implementations must use deterministic lifecycle transition rules and
         fail without mutation when ownership or ``expected_status`` does not
-        match. ``DELETED`` is only for an explicit user/privacy deletion.
+        match. They must reject ``target_status=SUPERSEDED``: CURRENT_STATE
+        replacement uses :meth:`supersede_current_state`, and future correction
+        semantics require their own replacement-aware atomic operation.
+        ``DELETED`` is only for an explicit user/privacy deletion.
         """
         ...

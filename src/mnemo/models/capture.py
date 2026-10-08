@@ -33,10 +33,18 @@ class Capture(BaseModel):
     captured_at: datetime
     created_at: datetime
 
-    @field_validator("user_id", "raw_text")
+    @field_validator("user_id")
     @classmethod
-    def _require_non_blank(cls, value: str, info: ValidationInfo) -> str:
-        return require_non_blank(value, field_name=info.field_name or "text field")
+    def _require_non_blank_user_id(cls, value: str) -> str:
+        return require_non_blank(value, field_name="user_id")
+
+    @field_validator("raw_text")
+    @classmethod
+    def _require_non_blank_raw_text(cls, value: str) -> str:
+        """Reject blank input without normalizing source provenance."""
+        if not value.strip():
+            raise ValueError("raw_text must not be blank")
+        return value
 
     @field_validator("captured_at", "created_at")
     @classmethod
