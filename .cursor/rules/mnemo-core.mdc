@@ -1,0 +1,18 @@
+---
+description: Cursor entrypoint for the shared Mnemo agent instructions.
+globs:
+alwaysApply: true
+---
+
+# Mnemo Cursor Rule
+
+The canonical cross-agent instructions live in @AGENTS.md.
+
+Before making non-trivial changes, read:
+- @AGENTS.md
+- @docs/project-status.md
+- @docs/decisions.md
+- @docs/architecture.md
+- the current sprint spec referenced by project-status
+
+Do not duplicate architecture rules in this Cursor-only file. If a durable project rule or architectural decision changes, update the shared repo documentation so Cursor, Codex, and future agents receive the same context.
