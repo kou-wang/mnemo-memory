@@ -43,7 +43,7 @@ Final semantics:
 
 ### Issue #3 — Canonical scenario fixtures
 
-Implementation complete on the Sprint 1 branch; awaiting review.
+Completed and reviewed.
 
 Implemented reusable deterministic scenario sequences for:
 - birthday facts and conservative conflicts
@@ -57,12 +57,24 @@ Implemented reusable deterministic scenario sequences for:
 All fixture timestamps, identifiers, expected lifecycle actions, final states,
 historical records, and source provenance are explicit and reproducible.
 
+## In progress
+
+### Issue #4 — CI and quality gates
+
+Next task.
+
+Required gates:
+- Ruff
+- mypy strict
+- pytest
+- lifecycle coverage >= 90%
+- Python 3.11 and 3.12 compatibility
+
 ## Next
 
-1. Review Issue #3 — canonical scenario fixtures
-2. Issue #4 — Tighten CI and quality gates
-3. Merge PR #6 when Sprint 1 is complete
-4. Sprint 2 — extraction/repository interfaces and conservative entity resolution
+1. Issue #4 — Tighten CI and quality gates
+2. Merge PR #6 when Sprint 1 is complete
+3. Sprint 2 — extraction/repository interfaces and conservative entity resolution
 
 ## Current constraints
 
