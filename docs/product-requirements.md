@@ -21,6 +21,25 @@ The product loop is:
 When available evidence does not support an answer, Mnemo must abstain instead
 of fabricating a personal fact.
 
+## Capture experience
+
+The MVP supports both text and voice capture. Capture must remain extremely
+low-friction: the target interaction time is approximately 3 seconds and should
+remain under 5 seconds.
+
+The established voice flow is:
+
+```shell
+audio
+-> transcription
+-> persist transcript/raw capture
+-> delete raw audio by default
+```
+
+The exact transcription provider and implementation are future-scoped. The
+persisted transcript/raw capture retains provenance; raw audio is not retained
+by default after transcription.
+
 ## Memory requirements
 
 Mnemo represents memories with five top-level kinds:
@@ -41,13 +60,21 @@ Recall should prefer structured lookup, temporal lookup, and aggregation before
 semantic retrieval. Personal answers must remain grounded in retained memory
 evidence.
 
-## User data expectations
+## Privacy and user control
 
 - A user's data must remain isolated from every other user's data, including in
   deterministic domain operations.
-- Users are expected to be able to inspect, edit or correct, delete, and export
-  their memory data. The interfaces, authorization model, export format, and
-  deletion workflow are `TBD` and require later approved design.
+- Personal data must be encrypted in transit and encrypted at rest. The exact
+  encryption architecture and key-management design are `TBD`.
+- Users must be able to export their data and delete their account/data. Export
+  formats and deletion mechanics are `TBD`.
+- Users must be able to inspect and edit or correct a memory that AI
+  interpretation got wrong. The editing interface is future-scoped.
+- Raw audio must be deleted by default after transcription.
+- Use of external AI providers must be disclosed when applicable. Mnemo must
+  not claim that processing or data remains entirely on-device when a cloud
+  provider is used.
+- User data is not intended to be used for model training.
 - Explicit privacy deletion is distinct from ordinary semantic lifecycle
   changes such as supersession, completion, cancellation, or expiration.
 - History and provenance are preserved unless the user explicitly deletes data.
@@ -63,26 +90,78 @@ The established initial use cases are:
 - life events and vehicle maintenance;
 - shopping and other future intents.
 
-## MVP boundaries and non-goals
+## Explicit MVP non-goals
+
+The MVP does not include:
+
+- Gmail integration;
+- Calendar integration;
+- Contacts integration;
+- photo understanding;
+- web bookmark/import;
+- social features;
+- payments/billing;
+- a universal AI assistant;
+- a meeting recorder;
+- a journaling product;
+- a full todo app;
+- a password manager;
+- 24/7 ambient recording.
+
+These boundaries prevent adjacent product ideas from silently expanding MVP
+scope. A future change requires explicit maintainer approval and Issue scope.
+
+## Architecture guardrails
 
 - Do not turn Mnemo into a general-purpose notes application.
 - Do not route every query through vector search.
 - Do not allow probabilistic extraction to control persistence or lifecycle.
 - Do not silently merge ambiguous entities.
 - Do not return unsupported personal claims.
-- Authentication, billing, notifications, mobile product details, model/vendor
-  selection, storage technology, and deployment architecture are future
-  decisions unless approved by a later Issue/ADR.
+
+## Consumer application direction
+
+The initial consumer application is iOS-first. React Native + Expo is the
+intended mobile implementation direction, and the shared codebase must preserve
+a path to Android. Detailed implementation, release planning, store operations,
+and rollout remain future-scoped.
 
 ## Engine and product boundary
 
-The open-source Mnemo engine owns reusable memory domain behavior and must
-remain independently useful. Consumer application experiences, private product
-services, and platform-specific UI belong in a separate product layer that uses
-the engine without weakening its invariants.
+The public, reusable open-source Memory Engine includes, as they are developed:
 
-The exact packaging, licensing, hosting, and boundary of future private product
-components are `TBD`.
+- domain memory models;
+- extraction interfaces and structured extraction;
+- entity resolution;
+- the lifecycle engine;
+- temporal logic;
+- deduplication and conflict rules;
+- retrieval and ranking;
+- evaluation tooling;
+- adapters, an SDK, and examples.
+
+The product/private layer includes:
+
+- consumer mobile UI;
+- brand;
+- product-specific auth glue;
+- analytics;
+- push notifications;
+- billing;
+- production infrastructure;
+- growth and product experiments;
+- other product-specific integration code.
+
+The open-source engine must remain independently useful, and the product layer
+must use it without weakening its invariants.
+
+Detailed packaging, hosting, deployment, and integration mechanics remain
+future-scoped.
+
+## License
+
+This repository and its reusable engine are licensed under Apache-2.0. The
+repository license is established, not `TBD`.
 
 See [Architecture](architecture.md), [accepted decisions](decisions/README.md),
 and the [roadmap](roadmap.md) for current constraints and sequencing.

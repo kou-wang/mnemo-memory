@@ -50,8 +50,9 @@ thresholds beyond established lifecycle coverage are `TBD`.
 ## 9. Consumer and mobile application work
 
 Build the low-friction consumer experience on top of the reusable engine after
-the engine boundaries are stable. Product platform, framework, and rollout
-details are `TBD`.
+the engine boundaries are stable. The established direction is iOS-first using
+React Native + Expo while preserving an Android path. Detailed application
+implementation, release planning, and rollout remain future-scoped.
 
 Current implementation and review state lives in
 [Project status](project-status.md), not in this roadmap.

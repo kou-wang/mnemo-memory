@@ -95,7 +95,8 @@ Scope:
 
 ## Current constraints
 
-Issue #7 is documentation/process-only and must not add or change:
+Issue #7 is documentation/process-only and must not add runtime implementation
+or infrastructure for:
 - FastAPI
 - PostgreSQL / SQLAlchemy
 - pgvector
