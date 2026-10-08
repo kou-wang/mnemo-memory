@@ -3,8 +3,10 @@
 A ``Memory`` is what the deterministic lifecycle engine and persistence
 adapters operate on. Unlike :class:`~mnemo.models.candidate.CandidateMemory`,
 subjects/objects have been resolved to :class:`~mnemo.models.entity.Entity`
-identifiers, and ``memory_key`` (when present) identifies a mutable
-``CURRENT_STATE`` slot.
+identifiers. ``memory_key`` is a ``CURRENT_STATE``-only concept that
+identifies a mutable state slot: it is required (and must be canonical)
+for ``CURRENT_STATE`` memories, and forbidden for every other
+``MemoryKind``.
 
 This module only validates the shape of a single record (temporal
 ordering, ``memory_key`` normalization/requirement). Cross-record
@@ -109,18 +111,27 @@ class Memory(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_current_state_requires_memory_key(self) -> Memory:
-        """Enforce architecture invariants for ``CURRENT_STATE`` memories.
+    def validate_memory_key_belongs_only_to_current_state(self) -> Memory:
+        """Enforce that ``memory_key`` is a ``CURRENT_STATE``-only concept.
 
-        - A ``memory_key`` identifying the mutable state slot is required.
-        - The ``memory_key`` must be exactly the canonical key derived from
-          this memory's own ``subject_entity_id`` and ``predicate`` (see
+        - ``CURRENT_STATE`` memories require a ``memory_key``, and it must
+          be exactly the canonical key derived from this memory's own
+          ``subject_entity_id`` and ``predicate`` (see
           :meth:`build_memory_key`). Without this check, a caller could
           supply an arbitrary ``memory_key`` that does not describe the
           same subject/predicate, letting a memory get reconciled against
           the wrong state slot.
+        - Every other ``MemoryKind`` must have ``memory_key`` unset.
+          ``memory_key`` identifies a mutable state slot; allowing it on
+          ``FACT``/``PREFERENCE``/``EVENT``/``INTENT`` would create
+          ambiguity and could let an unrelated memory participate in
+          ``CURRENT_STATE`` slot reconciliation.
         """
         if self.kind != MemoryKind.CURRENT_STATE:
+            if self.memory_key is not None:
+                raise ValueError(
+                    f"memory_key is only valid for CURRENT_STATE memories, not {self.kind.value}"
+                )
             return self
 
         if self.memory_key is None:

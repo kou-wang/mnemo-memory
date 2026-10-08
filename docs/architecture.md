@@ -36,7 +36,10 @@ The extractor must never write directly to storage.
 
 ## Domain invariants
 
-1. A `CURRENT_STATE` memory must have a `memory_key`.
+1. `memory_key` is a `CURRENT_STATE`-only concept: it is required (and
+   must equal the canonical key derived from `subject_entity_id` +
+   `predicate`) for `CURRENT_STATE` memories, and must be `None` for every
+   other `MemoryKind`.
 2. At most one active `CURRENT_STATE` memory may exist for a given user + memory key.
 3. A new value for the same current-state slot supersedes the previous active value.
 4. `FACT` has **no** single-active-slot invariant in Sprint 1. The engine
@@ -66,6 +69,10 @@ The extractor must never write directly to storage.
 10. Terminal history is retained unless the user explicitly deletes data.
 11. Every persisted memory should retain provenance to its source capture when available.
 12. Retrieval should prefer structured/temporal lookup before semantic search.
+13. User isolation is enforced inside `LifecycleEngine.reconcile()`, not
+    merely assumed from the caller: any existing memory with a different
+    `user_id` than the incoming memory raises a `LifecycleInvariantError`
+    rather than being silently filtered out.
 
 ## Memory key
 

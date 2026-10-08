@@ -8,6 +8,10 @@ memories, and whether a status transition is legal. It must remain:
 - independent of any database or LLM provider
 - the only place that encodes memory-kind-specific lifecycle semantics
 
+User isolation is enforced here, not merely assumed: :meth:`LifecycleEngine.reconcile`
+fails closed with :class:`LifecycleInvariantError` if any supplied
+existing memory belongs to a different user than the incoming memory.
+
 Per-kind reconciliation behavior:
 
 - ``CURRENT_STATE``: identified by ``memory_key``. At most one ACTIVE
@@ -90,6 +94,13 @@ class LifecycleEngine:
         """Decide how ``incoming`` should be reconciled against the
         caller-supplied ``existing_active`` memories for the same user.
 
+        User isolation is enforced here, not merely assumed: every memory
+        in ``existing_active`` must share ``incoming.user_id``. A foreign-
+        user memory is never silently filtered out -- it is treated as a
+        caller bug and raises :class:`LifecycleInvariantError`, because
+        user isolation is the highest-priority correctness rule in this
+        engine.
+
         ``existing_active`` is filtered to ``ACTIVE`` status defensively,
         but callers should generally already be passing only active
         memories for the relevant subject.
@@ -100,6 +111,8 @@ class LifecycleEngine:
         anything else appends. See the module docstring for the rationale
         behind not auto-superseding ``FACT``.
         """
+        self._require_same_user(existing_active=existing_active, incoming=incoming)
+
         active = [m for m in existing_active if m.status == MemoryStatus.ACTIVE]
 
         if incoming.kind == MemoryKind.CURRENT_STATE:
@@ -185,7 +198,14 @@ class LifecycleEngine:
         if not incoming.memory_key:
             raise LifecycleInvariantError("CURRENT_STATE requires memory_key")
 
-        same_slot = [m for m in active if m.memory_key == incoming.memory_key]
+        # Defensive: only existing CURRENT_STATE memories for the same slot
+        # may participate, even though memory_key is already restricted to
+        # CURRENT_STATE at the model layer.
+        same_slot = [
+            m
+            for m in active
+            if m.kind == MemoryKind.CURRENT_STATE and m.memory_key == incoming.memory_key
+        ]
         if len(same_slot) > 1:
             raise LifecycleInvariantError(
                 "CURRENT_STATE invariant violated: multiple active memories share one memory_key"
@@ -209,6 +229,23 @@ class LifecycleEngine:
             supersede_ids=[current.id],
             reason="A new value replaces the active value for the same state slot.",
         )
+
+    @staticmethod
+    def _require_same_user(*, existing_active: list[Memory], incoming: Memory) -> None:
+        """Fail closed if any supplied memory belongs to a different user.
+
+        User isolation must never depend on the caller correctly
+        filtering by ``user_id`` before calling :meth:`reconcile`; the
+        domain layer enforces it directly instead of silently dropping
+        foreign-user memories, which could mask a serious caller bug.
+        """
+        for memory in existing_active:
+            if memory.user_id != incoming.user_id:
+                raise LifecycleInvariantError(
+                    "reconcile() received a memory for a different user_id "
+                    f"(expected '{incoming.user_id}', got '{memory.user_id}'); "
+                    "existing_active must only contain memories for incoming.user_id"
+                )
 
     @staticmethod
     def _is_exact_duplicate(*, active: list[Memory], incoming: Memory) -> bool:

@@ -4,7 +4,8 @@ These are the deterministic behavior tests required by Sprint 1:
 CURRENT_STATE append/no-op/supersede, FACT's conservative
 duplicate-or-append behavior, PREFERENCE add semantics, EVENT append +
 duplicate handling, INTENT complete/cancel/expire, invalid terminal
-transitions, and duplicate-identity tightening (object_entity_id).
+transitions, duplicate-identity tightening (object_entity_id), and
+user-isolation enforcement inside reconcile().
 """
 
 from datetime import UTC, datetime, timedelta
@@ -29,13 +30,14 @@ def make_memory(
     entity_id: UUID | None = None,
     object_entity_id: UUID | None = None,
     source_capture_id: UUID | None = None,
+    user_id: str = "user-1",
 ) -> Memory:
     entity_id = entity_id or uuid4()
     memory_key = (
         Memory.build_memory_key(entity_id, predicate) if kind == MemoryKind.CURRENT_STATE else None
     )
     return Memory(
-        user_id="user-1",
+        user_id=user_id,
         kind=kind,
         subject_entity_id=entity_id,
         predicate=predicate,
@@ -444,3 +446,76 @@ def test_same_object_entity_id_is_a_duplicate() -> None:
     decision = engine.reconcile(existing_active=[original], incoming=repeated_capture)
 
     assert decision.action == LifecycleAction.NOOP
+
+
+# ---------------------------------------------------------------------------
+# User isolation: reconcile() must fail closed on cross-user input
+# ---------------------------------------------------------------------------
+
+
+def test_reconcile_rejects_mixed_user_current_state() -> None:
+    """A foreign-user memory must never be silently filtered out."""
+    engine = LifecycleEngine()
+    other_users_memory = make_memory(
+        kind=MemoryKind.CURRENT_STATE, value="A1", predicate="parked_at", user_id="user-2"
+    )
+    incoming = make_memory(
+        kind=MemoryKind.CURRENT_STATE, value="B7", predicate="parked_at", user_id="user-1"
+    )
+
+    with pytest.raises(LifecycleInvariantError):
+        engine.reconcile(existing_active=[other_users_memory], incoming=incoming)
+
+
+def test_reconcile_rejects_mixed_user_fact() -> None:
+    engine = LifecycleEngine()
+    other_users_memory = make_memory(
+        kind=MemoryKind.FACT, value="March 12", predicate="birthday", user_id="user-2"
+    )
+    incoming = make_memory(
+        kind=MemoryKind.FACT, value="March 12", predicate="birthday", user_id="user-1"
+    )
+
+    with pytest.raises(LifecycleInvariantError):
+        engine.reconcile(existing_active=[other_users_memory], incoming=incoming)
+
+
+def test_reconcile_rejects_mixed_user_even_when_one_memory_matches() -> None:
+    """Even if only one of several existing_active memories belongs to a
+    different user, the whole call must fail -- not silently drop just
+    that memory.
+    """
+    engine = LifecycleEngine()
+    entity_id = uuid4()
+    same_user_memory = make_memory(
+        kind=MemoryKind.EVENT,
+        value={"reps": 5},
+        predicate="bench_press",
+        entity_id=entity_id,
+        user_id="user-1",
+    )
+    other_users_memory = make_memory(
+        kind=MemoryKind.EVENT, value={"reps": 5}, predicate="bench_press", user_id="user-2"
+    )
+    incoming = make_memory(
+        kind=MemoryKind.EVENT,
+        value={"reps": 6},
+        predicate="bench_press",
+        entity_id=entity_id,
+        user_id="user-1",
+    )
+
+    with pytest.raises(LifecycleInvariantError):
+        engine.reconcile(existing_active=[same_user_memory, other_users_memory], incoming=incoming)
+
+
+def test_reconcile_allows_same_user_memories() -> None:
+    """Sanity check: same-user input is unaffected by the isolation check."""
+    engine = LifecycleEngine()
+    incoming = make_memory(
+        kind=MemoryKind.FACT, value="March 12", predicate="birthday", user_id="user-1"
+    )
+
+    decision = engine.reconcile(existing_active=[], incoming=incoming)
+
+    assert decision.action == LifecycleAction.APPEND

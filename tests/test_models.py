@@ -248,6 +248,43 @@ def test_two_equivalent_memory_keys_normalize_to_the_same_value() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Memory: memory_key is a CURRENT_STATE-only concept
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "kind",
+    [MemoryKind.FACT, MemoryKind.PREFERENCE, MemoryKind.EVENT, MemoryKind.INTENT],
+)
+def test_memory_key_is_rejected_for_non_current_state_kinds(kind: MemoryKind) -> None:
+    entity_id = uuid4()
+    with pytest.raises(ValidationError):
+        Memory(
+            user_id="user-1",
+            kind=kind,
+            subject_entity_id=entity_id,
+            predicate="some_predicate",
+            value="some_value",
+            memory_key=Memory.build_memory_key(entity_id, "some_predicate"),
+        )
+
+
+@pytest.mark.parametrize(
+    "kind",
+    [MemoryKind.FACT, MemoryKind.PREFERENCE, MemoryKind.EVENT, MemoryKind.INTENT],
+)
+def test_non_current_state_kinds_are_valid_without_memory_key(kind: MemoryKind) -> None:
+    memory = Memory(
+        user_id="user-1",
+        kind=kind,
+        subject_entity_id=uuid4(),
+        predicate="some_predicate",
+        value="some_value",
+    )
+    assert memory.memory_key is None
+
+
+# ---------------------------------------------------------------------------
 # Memory: memory_key must be the canonical key for subject_entity_id/predicate
 # ---------------------------------------------------------------------------
 
