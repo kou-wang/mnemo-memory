@@ -1,0 +1,335 @@
+---
+description: Core engineering and architecture rules for the Mnemo temporal personal-memory engine.
+globs:
+alwaysApply: true
+---
+
+# Mnemo Memory — Project Rules
+
+You are working on **mnemo-memory**, an open-source temporal personal-memory engine.
+
+Before making non-trivial changes, read:
+- @README.md
+- @docs/architecture.md
+- @docs/sprint-1-spec.md
+
+Treat those files as the current source of truth unless the user explicitly changes the product or architecture.
+
+## Product goal
+
+Mnemo is not a generic notes app and not a thin RAG wrapper.
+
+It converts short natural-language captures into structured personal memories that can be:
+- updated
+- superseded
+- expired
+- completed or cancelled
+- queried over time
+- aggregated into useful answers
+
+The initial consumer use cases are:
+- people and birthdays
+- preferences
+- parking and object locations
+- workouts
+- life events / maintenance
+- shopping and other future intents
+
+The engine must remain usable independently of the future consumer app.
+
+## Core memory model
+
+The five top-level memory kinds are:
+
+- `FACT`
+- `PREFERENCE`
+- `CURRENT_STATE`
+- `EVENT`
+- `INTENT`
+
+Do not introduce a new top-level memory kind without first showing why one of these five cannot represent the use case.
+
+Important semantics:
+
+### FACT
+Durable information such as a birthday.
+Corrections may supersede an earlier fact, but uncertain conflicts must not silently destroy history.
+
+### PREFERENCE
+A like, dislike, or preference.
+Multiple preferences may coexist.
+A new preference does not automatically replace unrelated preferences.
+
+### CURRENT_STATE
+Mutable state such as:
+- where a car is parked
+- where an object is located
+
+A state slot is identified by its `memory_key`.
+For the same user and `memory_key`, there must be at most one ACTIVE state.
+A new value supersedes the previous ACTIVE state while preserving history.
+
+### EVENT
+Historical occurrence such as:
+- workout set
+- oil change
+- trip
+- appointment that occurred
+
+Events are append-oriented.
+Do not overwrite prior events merely because newer events exist.
+
+### INTENT
+Something the user wants to do, buy, read, watch, visit, etc.
+Typical lifecycle:
+`ACTIVE -> COMPLETED | CANCELLED | EXPIRED | DELETED`.
+
+## Hard architecture boundary
+
+This is the most important rule in the codebase:
+
+> Probabilistic systems interpret language. Deterministic code controls memory lifecycle and persistence decisions.
+
+LLMs or extraction models may produce `CandidateMemory` objects.
+
+They must NOT directly:
+- write to the database
+- delete memories
+- supersede memories
+- mark intents complete
+- resolve lifecycle transitions
+- decide storage mutations outside explicit engine interfaces
+
+The deterministic domain layer owns:
+- deduplication policy
+- lifecycle transitions
+- state supersession
+- expiration
+- conflict handling
+- temporal validity
+- invariants
+
+Do not move these responsibilities into prompts.
+
+## Capture and provenance
+
+A capture and a memory are different concepts.
+
+One capture may create zero, one, or many candidate memories.
+
+Example:
+
+"Kevin's birthday is March 12, he likes whisky, and I want to buy him a racket."
+
+may produce:
+- FACT: Kevin / birthday / March 12
+- PREFERENCE: Kevin / likes / whisky
+- INTENT: buy / racket / for Kevin
+
+Persisted memories should retain provenance to the source capture whenever possible.
+
+Never throw away the original source merely because structured extraction succeeded.
+
+## Recall philosophy
+
+Prefer:
+1. structured lookup
+2. temporal lookup
+3. aggregation
+4. semantic retrieval when needed
+
+Do not default every query to vector search.
+
+Examples:
+- "Where is my car?" -> direct CURRENT_STATE lookup
+- "What does Kevin like?" -> entity + PREFERENCE lookup
+- "Where did I park yesterday?" -> temporal lookup
+- "How has my bench changed?" -> EVENT aggregation
+- vague conceptual recall -> hybrid / semantic retrieval
+
+A memory system must prefer **no answer** over a fabricated answer.
+
+If evidence is insufficient, return an explicit not-found / insufficient-evidence result.
+Never invent likely personal facts.
+
+## Entity resolution
+
+Entity resolution must be conservative.
+
+Prefer a duplicate entity over incorrectly merging two different people, places, or objects.
+
+Do not silently merge ambiguous entities based only on approximate string or embedding similarity.
+
+Entity merging must be explainable and reversible.
+
+## Time
+
+Treat time as first-class data.
+
+Keep distinct concepts when applicable:
+- observed_at
+- occurred_at
+- valid_from
+- valid_until
+- expires_at
+- created_at
+- updated_at
+
+Do not substitute `created_at` for event time or validity time.
+
+Temporal code should be explicit and testable.
+Avoid using the real clock directly inside domain logic when a controllable clock can be injected later.
+
+## Domain-code rules
+
+The domain layer must:
+- remain independent from FastAPI
+- remain independent from OpenAI or any specific LLM provider
+- remain independent from PostgreSQL / pgvector
+- avoid network calls
+- avoid hidden side effects
+- use typed models
+- keep lifecycle logic deterministic
+- raise explicit domain errors for invariant violations
+
+Prefer small pure functions and explicit state transitions over clever abstractions.
+
+Do not create generic framework layers before a concrete use case requires them.
+
+## Sprint discipline
+
+Follow the current sprint scope.
+
+For Sprint 1, do NOT add:
+- FastAPI
+- PostgreSQL
+- SQLAlchemy
+- pgvector
+- Redis
+- OpenAI SDK
+- React Native / Expo
+- authentication
+- billing
+- notifications
+
+Do not implement future sprint features simply because they seem useful.
+
+If a requested change conflicts with sprint scope, explain the conflict before implementing it.
+
+## Testing requirements
+
+Behavior changes require tests.
+
+Prioritize sequence tests because memory correctness depends on history.
+
+Important examples:
+
+1. Parking:
+   - save A1
+   - move to B7
+   - current location is B7
+   - historical location A1 remains queryable
+
+2. Shopping intent:
+   - want AirPods
+   - mark AirPods bought
+   - active shopping intents no longer include AirPods
+   - historical intent remains preserved
+
+3. Duplicate event:
+   - repeated identical capture should not blindly create duplicate history
+
+4. Correction:
+   - corrected fact should not erase provenance
+
+5. Abstention:
+   - unknown personal fact must not produce a guessed answer
+
+For deterministic lifecycle code, target at least 90% test coverage.
+
+Before considering a task complete, run:
+
+```bash
+ruff check .
+mypy src
+pytest --cov=mnemo --cov-report=term-missing
+```
+
+Fix failures rather than bypassing checks.
+
+## Python style
+
+- Python >= 3.11
+- Pydantic v2
+- full type annotations for public interfaces
+- mypy strict compatibility
+- Ruff-compliant formatting/imports
+- use `StrEnum` for stable string enums when appropriate
+- prefer UTC-aware datetimes
+- avoid mutable default arguments
+- avoid broad `except Exception` unless re-raising with useful context
+- do not suppress type errors without a specific documented reason
+
+Use clear domain names rather than generic names such as `data`, `item`, or `thing` when a precise term exists.
+
+## Dependency policy
+
+Keep the core lightweight.
+
+Before adding a dependency:
+1. explain what problem it solves
+2. check whether the standard library or current dependencies are sufficient
+3. avoid coupling the domain model to that dependency
+
+Do not add infrastructure packages during domain-only work.
+
+## Change policy
+
+Before editing core lifecycle semantics:
+1. identify the invariant being changed
+2. add or update tests expressing the intended behavior
+3. make the smallest implementation change
+4. run all quality gates
+5. update architecture docs if the contract changed
+
+Do not silently alter established memory semantics.
+
+## Git / PR behavior
+
+Keep changes focused.
+
+Prefer:
+- small logical commits
+- descriptive commit messages
+- one concern per PR when practical
+- tests in the same PR as behavior changes
+
+Do not commit:
+- secrets
+- API keys
+- local environment files
+- generated caches
+- personal user data
+
+## Open-source quality bar
+
+Code in this repository should be understandable to an external developer who has no context from private conversations.
+
+Public APIs and non-obvious lifecycle rules should be documented.
+
+Avoid product-specific hacks in the engine.
+If a behavior belongs only to the future Mnemo consumer app, keep it outside this repository unless it can be expressed as a reusable engine capability.
+
+## Decision priority
+
+When requirements conflict, use this priority order:
+
+1. user data correctness and safety
+2. deterministic memory semantics
+3. preservation of history and provenance
+4. testability
+5. simple public API
+6. performance
+7. implementation convenience
+
+When unsure, choose the simpler behavior and make uncertainty explicit instead of inventing semantics.
