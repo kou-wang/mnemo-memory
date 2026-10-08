@@ -39,11 +39,20 @@ The extractor must never write directly to storage.
 1. A `CURRENT_STATE` memory must have a `memory_key`.
 2. At most one active `CURRENT_STATE` memory may exist for a given user + memory key.
 3. A new value for the same current-state slot supersedes the previous active value.
-4. `EVENT` memories are append-only except for duplicate/correction handling.
-5. `INTENT` memories may become completed, cancelled, expired, or deleted.
-6. Terminal history is retained unless the user explicitly deletes data.
-7. Every persisted memory should retain provenance to its source capture when available.
-8. Retrieval should prefer structured/temporal lookup before semantic search.
+4. At most one active `FACT` memory may exist for a given subject + predicate. A
+   new value is treated as a correction: it supersedes (never deletes) the
+   previous active fact, preserving history and provenance.
+5. `PREFERENCE` memories may coexist freely; a new preference never replaces
+   an unrelated one. Removing a preference is a status transition (e.g. to
+   `DELETED`), not an automatic side effect of adding another preference.
+6. `EVENT` memories are append-only except for duplicate/correction handling.
+7. `INTENT` memories may become completed, cancelled, expired, or deleted.
+8. Terminal statuses (`SUPERSEDED`, `COMPLETED`, `CANCELLED`, `EXPIRED`,
+   `DELETED`) are final: once reached, a memory cannot transition to a
+   different status.
+9. Terminal history is retained unless the user explicitly deletes data.
+10. Every persisted memory should retain provenance to its source capture when available.
+11. Retrieval should prefer structured/temporal lookup before semantic search.
 
 ## Memory key
 
