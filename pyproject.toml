@@ -18,12 +18,20 @@ dependencies = [
 openai = [
   "openai>=3.26.1,<4",
 ]
+postgres = [
+  "alembic>=1.14,<2",
+  "psycopg[binary]>=3.2,<4",
+  "sqlalchemy>=2.0,<3",
+]
 dev = [
+  "alembic>=1.14,<2",
   "pytest>=8.3",
   "pytest-cov>=5.0",
   "ruff>=0.7",
   "mypy>=1.13",
   "openai>=3.26.1,<4",
+  "psycopg[binary]>=3.2,<4",
+  "sqlalchemy>=2.0,<3",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -32,6 +40,9 @@ packages = ["src/mnemo"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+markers = [
+  "postgres: requires a real PostgreSQL database",
+]
 
 [tool.ruff]
 target-version = "py311"

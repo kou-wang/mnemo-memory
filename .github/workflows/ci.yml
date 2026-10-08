@@ -17,12 +17,30 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12"]
 
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: mnemo_test
+          POSTGRES_USER: mnemo
+          POSTGRES_PASSWORD: mnemo_test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mnemo -d mnemo_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      MNEMO_TEST_DATABASE_URL: postgresql+psycopg://mnemo:mnemo_test_password@127.0.0.1:5432/mnemo_test
+
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -38,8 +56,11 @@ jobs:
       - name: Type check
         run: mypy src
 
-      - name: Test with coverage
-        run: pytest --cov=mnemo --cov-report=term-missing
+      - name: Unit tests with coverage
+        run: pytest -m "not postgres" --cov=mnemo --cov-report=term-missing
+
+      - name: PostgreSQL integration tests
+        run: pytest -m postgres --cov=mnemo --cov-append --cov-report=term-missing
 
       - name: Enforce lifecycle coverage
         run: coverage report --include="*/mnemo/lifecycle/*" --fail-under=90

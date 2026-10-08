@@ -110,3 +110,22 @@ Supplying a memory for a different user is an invariant violation; it must not b
 All datetime values used by core memory models are timezone-aware.
 
 Prefer UTC internally and preserve semantic distinctions among observation, occurrence, validity, expiration, and storage timestamps.
+
+## ADR-011 — PostgreSQL persistence adapter
+
+**Status:** Accepted
+
+PostgreSQL is the first durable persistence backend. Its adapter uses
+SQLAlchemy 2.x with the synchronous psycopg 3 driver, and Alembic owns schema
+migrations. The domain models and repository protocols remain independent of
+all three libraries.
+
+PostgreSQL stores structured memory values in `JSONB`, preserves timezone-aware
+timestamps, and enforces same-user references with composite foreign keys. A
+partial unique index enforces at most one active `CURRENT_STATE` for each
+`(user_id, memory_key)` slot. Current-state supersession must lock and retire the
+old row while inserting its replacement in one transaction; generic status
+transitions cannot set `SUPERSEDED`.
+
+This decision does not select a vector index, retrieval strategy, service API,
+or asynchronous database stack.

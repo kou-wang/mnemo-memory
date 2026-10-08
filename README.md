@@ -71,6 +71,32 @@ The adapter sends capture text to an external AI provider. It only interprets
 language into candidate memories; persistence, entity resolution, and lifecycle
 mutations remain separate deterministic responsibilities.
 
+### Optional PostgreSQL persistence
+
+Install the PostgreSQL adapter and migration tooling only when needed:
+
+```bash
+pip install -e ".[postgres]"
+```
+
+Set a SQLAlchemy psycopg URL and apply the schema:
+
+```bash
+export MNEMO_DATABASE_URL="postgresql+psycopg://USER:PASSWORD@HOST/DATABASE"
+alembic upgrade head
+```
+
+The integration suite requires a disposable PostgreSQL database and runs the
+migrations itself:
+
+```bash
+export MNEMO_TEST_DATABASE_URL="postgresql+psycopg://USER:PASSWORD@HOST/TEST_DATABASE"
+pytest -m postgres
+```
+
+Never point the integration suite at a database containing data that must be
+retained. CI runs these tests against an isolated PostgreSQL service.
+
 The workflow exposes stable `Quality gates (Python 3.11)` and
 `Quality gates (Python 3.12)` checks. Repository administrators must configure
 those checks as required in GitHub branch protection; the workflow itself

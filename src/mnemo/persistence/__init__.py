@@ -1,0 +1,1 @@
+"""Optional concrete persistence adapters."""
