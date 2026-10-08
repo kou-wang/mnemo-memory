@@ -41,17 +41,25 @@ Final semantics:
 - CURRENT_STATE reconciliation only considers CURRENT_STATE memories in the same slot
 - DELETED remains reserved for explicit user/privacy deletion
 
-## In progress
-
 ### Issue #3 — Canonical scenario fixtures
 
-Next task.
+Implementation complete on the Sprint 1 branch; awaiting review.
 
-The fixtures should represent reusable consumer-memory sequences and later seed the evaluation dataset.
+Implemented reusable deterministic scenario sequences for:
+- birthday facts and conservative conflicts
+- coexisting friend preferences and exact repeats
+- parking and passport current-state history
+- workout and vehicle-maintenance events
+- shopping intent completion and multi-memory Costco captures
+- duplicate-event no-op behavior
+- cross-user reconciliation failure
+
+All fixture timestamps, identifiers, expected lifecycle actions, final states,
+historical records, and source provenance are explicit and reproducible.
 
 ## Next
 
-1. Issue #3 — Add canonical scenario fixtures
+1. Review Issue #3 — canonical scenario fixtures
 2. Issue #4 — Tighten CI and quality gates
 3. Merge PR #6 when Sprint 1 is complete
 4. Sprint 2 — extraction/repository interfaces and conservative entity resolution
