@@ -4,13 +4,15 @@ Last updated: 2026-10-08
 
 ## Current phase
 
-**Developer Workflow Hardening — Issue #7**
+**Sprint 2 — Core Interfaces (Issue #5)**
 
-Working branch: `chore/issue-7-agent-workflow`
+Working branch: `feat/issue-5-core-interfaces`
 
 Sprint 1 PR: **#6 — merged**
 
-Open PR: **#8 — Developer workflow: shared agent instructions and PR review process**
+Developer workflow PR: **#8 — merged**
+
+Open PR: **#9 — Sprint 2: define extraction and storage interfaces**
 
 ## Completed
 
@@ -73,11 +75,9 @@ The same commands are documented for local use. Sprint 1 is complete. The
 workflow does not claim that GitHub branch protection is enabled; repository
 administrators configure required checks separately.
 
-## In progress
-
 ### Issue #7 — Shared agent workflow
 
-Implementation reviewed and approved on PR #8; ready to merge after CI remains green.
+Completed and reviewed.
 
 Scope:
 - canonical cross-agent guidance in root `AGENTS.md`
@@ -86,28 +86,44 @@ Scope:
 - accepted ADR migration to `docs/decisions/`
 - concise pull request template
 
+## In progress
+
+### Issue #5 — Core interfaces
+
+Implementation complete on PR #9; awaiting maintainer review.
+
+Implemented provider-independent contracts for:
+- raw text/voice-transcript Capture provenance
+- extraction to zero, one, or many CandidateMemory values
+- conservative matched/unmatched/ambiguous entity resolution
+- user-scoped capture and memory repositories
+- atomic current-state supersession and explicit status transitions
+- injectable timezone-aware clocks
+
+No concrete provider, storage backend, network integration, or lifecycle
+semantic change is included.
+
 ## Next
 
-1. Merge PR #8 / Issue #7
-2. Issue #5 — Sprint 2 extraction and storage interfaces
-3. Later extraction, entity resolution, persistence, retrieval, and evaluation work
-4. Consumer/mobile application work
+1. Review and merge Issue #5
+2. Later extraction, entity resolution, persistence, retrieval, and evaluation work
+3. Consumer/mobile application work
 
 ## Current constraints
 
-Issue #7 is documentation/process-only and must not add runtime implementation
-or infrastructure for:
+Issue #5 defines interfaces only and must not add concrete implementation or
+infrastructure for:
 - FastAPI
 - PostgreSQL / SQLAlchemy
 - pgvector
 - Redis
 - OpenAI SDK
-- React Native / Expo
+- React Native / Expo code
 - authentication
 - billing
 - notifications
-- memory models or lifecycle semantics
-- extraction or storage interfaces
+- lifecycle semantic changes
+- extraction providers or storage backends
 
 ## Product direction
 
