@@ -10,6 +10,8 @@ Working branch: `chore/issue-7-agent-workflow`
 
 Sprint 1 PR: **#6 — merged**
 
+Open PR: **#8 — Developer workflow: shared agent instructions and PR review process**
+
 ## Completed
 
 ### Issue #1 — Core domain models
@@ -75,7 +77,7 @@ administrators configure required checks separately.
 
 ### Issue #7 — Shared agent workflow
 
-Implementation in progress on `chore/issue-7-agent-workflow`.
+Implementation complete on PR #8; awaiting maintainer review.
 
 Scope:
 - canonical cross-agent guidance in root `AGENTS.md`
