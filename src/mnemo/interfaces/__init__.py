@@ -9,6 +9,7 @@ from mnemo.interfaces.entities import (
 from mnemo.interfaces.extraction import Extractor
 from mnemo.interfaces.repositories import (
     CaptureRepository,
+    EntityRepository,
     MemoryRepository,
     RepositoryInvariantError,
 )
@@ -18,6 +19,7 @@ __all__ = [
     "Clock",
     "EntityResolution",
     "EntityResolutionOutcome",
+    "EntityRepository",
     "EntityResolver",
     "Extractor",
     "MemoryRepository",

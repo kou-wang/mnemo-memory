@@ -1,4 +1,4 @@
-"""Provider-independent persistence contracts for captures and memories."""
+"""Provider-independent persistence contracts for core domain records."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from typing import Protocol
 from uuid import UUID
 
 from mnemo.models.capture import Capture
+from mnemo.models.entity import Entity
 from mnemo.models.memory import Memory
 from mnemo.models.types import MemoryKind, MemoryStatus
 
@@ -26,6 +27,22 @@ class CaptureRepository(Protocol):
     def add(self, *, user_id: str, capture: Capture) -> None: ...
 
     def get(self, *, user_id: str, capture_id: UUID) -> Capture | None: ...
+
+
+class EntityRepository(Protocol):
+    """Persist and read entities within an explicit user scope.
+
+    Implementations must reject ``add`` when ``entity.user_id`` differs from
+    ``user_id`` and when an entity with the same id already exists. ``get``
+    must make a foreign entity indistinguishable from a missing record, and
+    ``list_for_user`` must never return another user's entities.
+    """
+
+    def add(self, *, user_id: str, entity: Entity) -> None: ...
+
+    def get(self, *, user_id: str, entity_id: UUID) -> Entity | None: ...
+
+    def list_for_user(self, *, user_id: str) -> Sequence[Entity]: ...
 
 
 class MemoryRepository(Protocol):
