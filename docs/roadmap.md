@@ -34,7 +34,9 @@ ambiguous merges. Detailed algorithms are `TBD`.
 ## 6. Persistence
 
 Persist structured and temporal memory behind the approved storage boundary.
-Database and indexing choices are `TBD`.
+Issue #14 establishes PostgreSQL through SQLAlchemy 2.x and psycopg 3, with
+Alembic migrations and database-enforced current-state/user-scope invariants.
+Vector and semantic indexing choices remain `TBD`.
 
 ## 7. Retrieval and temporal recall
 

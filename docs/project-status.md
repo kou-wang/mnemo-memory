@@ -4,9 +4,9 @@ Last updated: 2026-10-08
 
 ## Current phase
 
-**Sprint 2 — Deterministic Entity Resolution (Issue #12)**
+**Persistence — PostgreSQL adapters (Issue #14)**
 
-Working branch: `feat/deterministic-entity-resolution`
+Working branch: `feat/postgres-persistence`
 
 Sprint 1 PR: **#6 — merged**
 
@@ -16,7 +16,9 @@ Core interfaces PR: **#9 — merged**
 
 OpenAI extractor PR: **#11 — merged**
 
-Issue #12 implementation: **complete; awaiting maintainer review**
+Deterministic entity resolution PR: **#13 — merged**
+
+Issue #14 implementation: **complete; awaiting maintainer review**
 
 ## Completed
 
@@ -118,11 +120,9 @@ Implemented:
 The extractor has no persistence, entity-resolution, or lifecycle authority.
 No storage backend or lifecycle semantic change is included.
 
-## In progress
-
 ### Issue #12 — Deterministic entity resolution
 
-Implementation complete; awaiting maintainer review.
+Completed and reviewed.
 
 Implemented:
 - a provider-independent, user-scoped `EntityRepository` contract
@@ -132,30 +132,42 @@ Implemented:
 - entity-id deduplication and stable ambiguous candidate ordering
 - fail-closed repository scope validation
 - read-only resolution with no entity creation, alias learning, or merge behavior
-- test-only repository fakes and behavior/contract coverage
+
+## In progress
+
+### Issue #14 — PostgreSQL persistence
+
+Implementation complete; awaiting maintainer review.
+
+Implemented:
+- SQLAlchemy 2.x + psycopg 3 adapters for capture, entity, and memory repositories
+- an Alembic initial PostgreSQL schema migration
+- exact capture provenance, timezone-aware timestamps, arrays, and JSONB values
+- same-user composite foreign keys and fail-closed repository access
+- a partial unique index for active current-state slots
+- transactional, row-locked current-state supersession with rollback guarantees
+- real PostgreSQL integration coverage in the Python 3.11/3.12 CI matrix
 
 ## Next
 
-1. Review Issue #12 and its dedicated PR
-2. Later persistence, retrieval, and evaluation work
+1. Review Issue #14 and its dedicated PR
+2. Later retrieval and evaluation work
 3. Consumer/mobile application work
 
 ## Current constraints
 
-Issue #12 adds only the deterministic entity-resolution baseline and must not add:
+Issue #14 adds only PostgreSQL persistence behind the existing repository
+contracts and must not add:
 - FastAPI
-- PostgreSQL / SQLAlchemy
 - pgvector
 - Redis
-- fuzzy matching, edit distance, embeddings, or LLM resolution
-- automatic alias learning, entity creation, or entity merging
 - React Native / Expo code
 - authentication
 - billing
 - notifications
 - lifecycle semantic changes
-- concrete storage backends
-- capture-to-persistence or lifecycle orchestration
+- retrieval, embeddings, or semantic indexing
+- capture-to-persistence orchestration
 
 ## Product direction
 

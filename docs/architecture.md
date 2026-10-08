@@ -46,9 +46,10 @@ The extractor must never write directly to storage.
 
 ## Core interface boundaries
 
-Sprint 2 keeps provider-independent contracts authoritative while concrete
-implementations remain behind those boundaries. It does not select or implement
-a database.
+Provider-independent contracts remain authoritative while concrete
+implementations stay behind those boundaries. PostgreSQL is the first
+persistence adapter and does not leak SQLAlchemy or database types into the
+domain models or repository protocols.
 
 ### Capture
 
@@ -120,8 +121,19 @@ as atomic operations:
 A `NOOP` decision performs no repository write. Repository adapters must fail
 closed on cross-user mutation and must not expose another user's record through
 lookup. Generic status transition operations must reject `SUPERSEDED` because
-supersession requires an atomic replacement-aware operation. Concrete storage
-adapters remain future work.
+supersession requires an atomic replacement-aware operation.
+
+The PostgreSQL adapter uses SQLAlchemy 2.x with psycopg 3 and Alembic-managed
+schema migrations. It preserves structured memory values in `JSONB` and stores
+timezone-aware timestamps. Composite foreign keys enforce that memory subjects,
+objects, captures, and supersession links remain in the same user scope. A
+partial unique index enforces at most one active `CURRENT_STATE` per
+`(user_id, memory_key)` even when a caller bypasses repository code.
+
+Each repository mutation owns one database transaction. Current-state
+supersession locks the existing active row and changes it to `SUPERSEDED` while
+inserting its replacement in that same transaction; any failure rolls back both
+changes. The generic transition method remains non-supersession-only.
 
 ### Time
 
@@ -189,7 +201,6 @@ The persistence layer will scope keys by user.
 The current interface layer intentionally excludes:
 
 - additional LLM provider implementations
-- PostgreSQL adapter
 - pgvector
 - fuzzy or semantic entity candidate generation and entity merge operations
 - FastAPI
