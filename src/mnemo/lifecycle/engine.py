@@ -13,19 +13,27 @@ Per-kind reconciliation behavior:
 - ``CURRENT_STATE``: identified by ``memory_key``. At most one ACTIVE
   memory may exist per key. A new value supersedes the previous active
   value; an unchanged value is a no-op.
-- ``FACT``: identified by ``(subject_entity_id, predicate)``. At most one
-  ACTIVE fact may exist per subject/predicate. A new value is a
-  *correction* that supersedes the previous active fact -- the old fact
-  is kept (status ``SUPERSEDED``), never deleted, so provenance and
-  history are preserved.
+- ``FACT``: exact duplicates are a no-op; any other incoming fact
+  (including one that differs only in value for the same
+  ``subject_entity_id``/``predicate``) appends. The engine deliberately
+  does **not** supersede a differing fact automatically: it cannot tell
+  from ``MemoryKind.FACT`` alone whether a predicate is single-valued
+  (e.g. ``birthday``) or naturally multi-valued (e.g. ``has_child``,
+  ``owns_pet``, ``phone_number``), and uncertain conflicts must not
+  silently retire history. Explicit correction/update semantics are a
+  future design that will require the caller to provide an unambiguous,
+  deterministic correction signal -- not left to this engine to infer.
 - ``PREFERENCE``: multiple preferences may coexist. A new preference
   never replaces an unrelated one; exact duplicates are a no-op and
-  everything else appends. Removing a preference is a status transition
-  (e.g. to ``DELETED``), not a reconciliation decision.
+  everything else appends. Sprint 1 does not implement natural-language
+  preference removal; when that lands, it will retire/end a prior
+  preference via explicit supersession or validity-window logic, not via
+  ``MemoryStatus.DELETED`` (which is reserved for explicit user/privacy
+  deletion, never as a stand-in for "no longer true").
 - ``EVENT``: append-only. Exact duplicate captures (same subject,
-  predicate, value, and ``occurred_at``) are a no-op so that a repeated
-  identical capture does not blindly create duplicate history; anything
-  else appends.
+  predicate, object, value, and ``occurred_at``) are a no-op so that a
+  repeated identical capture does not blindly create duplicate history;
+  anything else appends.
 - ``INTENT``: appends like ``EVENT``/``PREFERENCE``. Its lifecycle
   (``ACTIVE -> COMPLETED | CANCELLED | EXPIRED | DELETED``) is handled by
   :meth:`LifecycleEngine.validate_status_transition`, not by reconciliation.
@@ -85,14 +93,17 @@ class LifecycleEngine:
         ``existing_active`` is filtered to ``ACTIVE`` status defensively,
         but callers should generally already be passing only active
         memories for the relevant subject.
+
+        Only ``CURRENT_STATE`` has slot-based supersession in Sprint 1.
+        Every other kind (``FACT``, ``PREFERENCE``, ``EVENT``, ``INTENT``)
+        uses the conservative default: an exact duplicate is a no-op,
+        anything else appends. See the module docstring for the rationale
+        behind not auto-superseding ``FACT``.
         """
         active = [m for m in existing_active if m.status == MemoryStatus.ACTIVE]
 
         if incoming.kind == MemoryKind.CURRENT_STATE:
             return self._reconcile_current_state(active=active, incoming=incoming)
-
-        if incoming.kind == MemoryKind.FACT:
-            return self._reconcile_fact(active=active, incoming=incoming)
 
         if self._is_exact_duplicate(active=active, incoming=incoming):
             return LifecycleDecision(
@@ -124,10 +135,12 @@ class LifecycleEngine:
         - ``INTENT`` may move from a non-terminal status to ``COMPLETED``,
           ``CANCELLED``, ``EXPIRED``, or ``DELETED``.
         - All other kinds may move from a non-terminal status to
-          ``SUPERSEDED``, ``EXPIRED``, or ``DELETED`` (e.g. a ``FACT``
-          correction, a ``PREFERENCE`` removal, or an ``EVENT``
-          correction). They may not become ``COMPLETED``/``CANCELLED``,
-          which are INTENT-only concepts.
+          ``SUPERSEDED``, ``EXPIRED``, or ``DELETED``. They may not
+          become ``COMPLETED``/``CANCELLED``, which are INTENT-only
+          concepts. Note that this transition being *legal* does not mean
+          Sprint 1 code currently triggers it automatically -- e.g.
+          reconciliation never requests ``DELETED`` for a ``PREFERENCE``
+          just because a newer, different preference was captured.
         """
         if current == target:
             return
@@ -173,79 +186,28 @@ class LifecycleEngine:
             raise LifecycleInvariantError("CURRENT_STATE requires memory_key")
 
         same_slot = [m for m in active if m.memory_key == incoming.memory_key]
-        return self._reconcile_single_active_slot(
-            incoming=incoming,
-            same_slot=same_slot,
-            empty_reason="No active memory exists for this state slot.",
-            noop_reason="Incoming current state matches the active state.",
-            supersede_reason="A new value replaces the active value for the same state slot.",
-            invariant_message=(
-                "CURRENT_STATE invariant violated: multiple active memories share one memory_key"
-            ),
-        )
-
-    def _reconcile_fact(
-        self,
-        *,
-        active: list[Memory],
-        incoming: Memory,
-    ) -> LifecycleDecision:
-        """FACT correction semantics: at most one ACTIVE fact may exist
-        per ``(subject_entity_id, predicate)``. A differing value is
-        treated as a correction that supersedes -- not deletes -- the
-        previous active fact, preserving its provenance and history.
-        """
-        same_slot = [
-            m
-            for m in active
-            if m.kind == MemoryKind.FACT
-            and m.subject_entity_id == incoming.subject_entity_id
-            and m.predicate == incoming.predicate
-        ]
-        return self._reconcile_single_active_slot(
-            incoming=incoming,
-            same_slot=same_slot,
-            empty_reason="No active fact exists for this subject and predicate.",
-            noop_reason="Incoming fact matches the active fact.",
-            supersede_reason=(
-                "A corrected fact value supersedes the previous active fact "
-                "while preserving its history."
-            ),
-            invariant_message=(
-                "FACT invariant violated: multiple active facts share the same "
-                "subject and predicate"
-            ),
-        )
-
-    @staticmethod
-    def _reconcile_single_active_slot(
-        *,
-        incoming: Memory,
-        same_slot: list[Memory],
-        empty_reason: str,
-        noop_reason: str,
-        supersede_reason: str,
-        invariant_message: str,
-    ) -> LifecycleDecision:
-        """Shared reconciliation for "at most one ACTIVE memory per slot"
-        kinds (``CURRENT_STATE`` and ``FACT``): append when the slot is
-        empty, no-op when the value is unchanged, otherwise supersede the
-        single existing occupant of the slot.
-        """
         if len(same_slot) > 1:
-            raise LifecycleInvariantError(invariant_message)
+            raise LifecycleInvariantError(
+                "CURRENT_STATE invariant violated: multiple active memories share one memory_key"
+            )
 
         if not same_slot:
-            return LifecycleDecision(action=LifecycleAction.APPEND, reason=empty_reason)
+            return LifecycleDecision(
+                action=LifecycleAction.APPEND,
+                reason="No active memory exists for this state slot.",
+            )
 
         current = same_slot[0]
         if current.value == incoming.value:
-            return LifecycleDecision(action=LifecycleAction.NOOP, reason=noop_reason)
+            return LifecycleDecision(
+                action=LifecycleAction.NOOP,
+                reason="Incoming current state matches the active state.",
+            )
 
         return LifecycleDecision(
             action=LifecycleAction.SUPERSEDE,
             supersede_ids=[current.id],
-            reason=supersede_reason,
+            reason="A new value replaces the active value for the same state slot.",
         )
 
     @staticmethod
@@ -254,6 +216,7 @@ class LifecycleEngine:
             existing.kind == incoming.kind
             and existing.subject_entity_id == incoming.subject_entity_id
             and existing.predicate == incoming.predicate
+            and existing.object_entity_id == incoming.object_entity_id
             and existing.value == incoming.value
             and existing.occurred_at == incoming.occurred_at
             for existing in active

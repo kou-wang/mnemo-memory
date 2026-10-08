@@ -1,10 +1,10 @@
 """Lifecycle engine tests covering all five memory kinds.
 
 These are the deterministic behavior tests required by Sprint 1:
-CURRENT_STATE append/no-op/supersede, FACT correction, PREFERENCE
-add/remove, EVENT append + duplicate handling, INTENT complete/cancel/
-expire, invalid terminal transitions, and provenance/history
-preservation.
+CURRENT_STATE append/no-op/supersede, FACT's conservative
+duplicate-or-append behavior, PREFERENCE add semantics, EVENT append +
+duplicate handling, INTENT complete/cancel/expire, invalid terminal
+transitions, and duplicate-identity tightening (object_entity_id).
 """
 
 from datetime import UTC, datetime, timedelta
@@ -27,6 +27,7 @@ def make_memory(
     value: object,
     predicate: str = "located_at",
     entity_id: UUID | None = None,
+    object_entity_id: UUID | None = None,
     source_capture_id: UUID | None = None,
 ) -> Memory:
     entity_id = entity_id or uuid4()
@@ -38,6 +39,7 @@ def make_memory(
         kind=kind,
         subject_entity_id=entity_id,
         predicate=predicate,
+        object_entity_id=object_entity_id,
         value=value,
         memory_key=memory_key,
         source_capture_id=source_capture_id,
@@ -104,7 +106,7 @@ def test_current_state_rejects_multiple_active_memories_for_one_slot() -> None:
 
 
 # ---------------------------------------------------------------------------
-# FACT: correction semantics
+# FACT: conservative duplicate-or-append behavior (no auto-supersession)
 # ---------------------------------------------------------------------------
 
 
@@ -117,33 +119,8 @@ def test_fact_appends_when_no_active_fact_exists() -> None:
     assert decision.action == LifecycleAction.APPEND
 
 
-def test_fact_correction_supersedes_without_deleting_history() -> None:
-    """Sequence: 'Kevin's birthday is March 12' -> corrected to March 13."""
-    engine = LifecycleEngine()
-    entity_id = uuid4()
-    capture_id = uuid4()
-    original = make_memory(
-        kind=MemoryKind.FACT,
-        value="March 12",
-        predicate="birthday",
-        entity_id=entity_id,
-        source_capture_id=capture_id,
-    )
-    correction = original.model_copy(
-        update={"id": uuid4(), "value": "March 13", "source_capture_id": uuid4()}
-    )
-
-    decision = engine.reconcile(existing_active=[original], incoming=correction)
-
-    assert decision.action == LifecycleAction.SUPERSEDE
-    assert decision.supersede_ids == [original.id]
-    # Provenance preserved: the original fact and its source capture are
-    # untouched, and the correction keeps its own distinct provenance.
-    assert original.source_capture_id == capture_id
-    assert correction.source_capture_id != original.source_capture_id
-
-
-def test_fact_identical_value_is_noop() -> None:
+def test_fact_exact_duplicate_is_noop() -> None:
+    """A repeated identical capture must not blindly create duplicate history."""
     engine = LifecycleEngine()
     original = make_memory(kind=MemoryKind.FACT, value="March 12", predicate="birthday")
     repeated_capture = original.model_copy(update={"id": uuid4()})
@@ -151,6 +128,32 @@ def test_fact_identical_value_is_noop() -> None:
     decision = engine.reconcile(existing_active=[original], incoming=repeated_capture)
 
     assert decision.action == LifecycleAction.NOOP
+
+
+def test_fact_with_different_value_appends_instead_of_superseding() -> None:
+    """A differing FACT value for the same subject/predicate must append,
+    not auto-supersede.
+
+    The engine cannot tell from MemoryKind.FACT alone whether a predicate
+    is single-valued (e.g. birthday) or naturally multi-valued (e.g.
+    has_child, owns_pet, phone_number), so an uncertain conflict must not
+    silently retire history. Explicit correction semantics are a future
+    design that requires an unambiguous, deterministic signal from the
+    caller.
+    """
+    engine = LifecycleEngine()
+    entity_id = uuid4()
+    original = make_memory(
+        kind=MemoryKind.FACT, value="March 12", predicate="birthday", entity_id=entity_id
+    )
+    conflicting = original.model_copy(update={"id": uuid4(), "value": "March 13"})
+
+    decision = engine.reconcile(existing_active=[original], incoming=conflicting)
+
+    assert decision.action == LifecycleAction.APPEND
+    # History is preserved implicitly: nothing is superseded or deleted.
+    assert decision.supersede_ids == []
+    assert original.status == MemoryStatus.ACTIVE
 
 
 def test_fact_for_different_predicate_does_not_interfere() -> None:
@@ -168,23 +171,30 @@ def test_fact_for_different_predicate_does_not_interfere() -> None:
     assert decision.action == LifecycleAction.APPEND
 
 
-def test_fact_rejects_multiple_active_facts_for_one_subject_predicate() -> None:
+def test_multiple_active_facts_for_the_same_subject_predicate_are_allowed() -> None:
+    """Unlike CURRENT_STATE, FACT has no single-active-slot invariant:
+    multi-valued predicates (e.g. owns_pet) may legitimately have several
+    ACTIVE facts for the same subject + predicate.
+    """
     engine = LifecycleEngine()
     entity_id = uuid4()
-    first = make_memory(
-        kind=MemoryKind.FACT, value="March 12", predicate="birthday", entity_id=entity_id
+    first_pet = make_memory(
+        kind=MemoryKind.FACT, value="dog", predicate="owns_pet", entity_id=entity_id
     )
-    duplicate_active = first.model_copy(update={"id": uuid4(), "value": "March 13"})
+    second_pet = make_memory(
+        kind=MemoryKind.FACT, value="cat", predicate="owns_pet", entity_id=entity_id
+    )
     incoming = make_memory(
-        kind=MemoryKind.FACT, value="March 14", predicate="birthday", entity_id=entity_id
+        kind=MemoryKind.FACT, value="parrot", predicate="owns_pet", entity_id=entity_id
     )
 
-    with pytest.raises(LifecycleInvariantError):
-        engine.reconcile(existing_active=[first, duplicate_active], incoming=incoming)
+    decision = engine.reconcile(existing_active=[first_pet, second_pet], incoming=incoming)
+
+    assert decision.action == LifecycleAction.APPEND
 
 
 # ---------------------------------------------------------------------------
-# PREFERENCE: add / remove semantics
+# PREFERENCE: add semantics (Sprint 1 does not implement removal)
 # ---------------------------------------------------------------------------
 
 
@@ -214,14 +224,24 @@ def test_duplicate_preference_capture_is_noop() -> None:
     assert decision.action == LifecycleAction.NOOP
 
 
-def test_preference_removal_is_a_status_transition_not_a_reconcile_decision() -> None:
-    """Removing a preference happens via status transition (e.g. DELETED),
-    independent of reconcile()."""
-    LifecycleEngine().validate_status_transition(
-        kind=MemoryKind.PREFERENCE,
-        current=MemoryStatus.ACTIVE,
-        target=MemoryStatus.DELETED,
+def test_different_preference_for_same_predicate_appends_not_supersedes() -> None:
+    """A different value for the same subject + predicate still appends --
+    PREFERENCE has no single-active-slot invariant, and Sprint 1 does not
+    infer "no longer true" from a differing capture.
+    """
+    engine = LifecycleEngine()
+    entity_id = uuid4()
+    likes_whisky = make_memory(
+        kind=MemoryKind.PREFERENCE, value="whisky", predicate="likes", entity_id=entity_id
     )
+    likes_rum = make_memory(
+        kind=MemoryKind.PREFERENCE, value="rum", predicate="likes", entity_id=entity_id
+    )
+
+    decision = engine.reconcile(existing_active=[likes_whisky], incoming=likes_rum)
+
+    assert decision.action == LifecycleAction.APPEND
+    assert decision.supersede_ids == []
 
 
 # ---------------------------------------------------------------------------
@@ -377,3 +397,50 @@ def test_same_status_transition_is_always_a_noop() -> None:
         current=MemoryStatus.DELETED,
         target=MemoryStatus.DELETED,
     )
+
+
+# ---------------------------------------------------------------------------
+# Duplicate identity must include object_entity_id
+# ---------------------------------------------------------------------------
+
+
+def test_different_object_entity_id_is_not_a_duplicate() -> None:
+    """Two otherwise-identical memories with different object_entity_id
+    values describe different relations and must not collapse into a
+    duplicate no-op.
+    """
+    engine = LifecycleEngine()
+    entity_id = uuid4()
+    gift_for_kevin = make_memory(
+        kind=MemoryKind.INTENT,
+        value="racket",
+        predicate="buy_for",
+        entity_id=entity_id,
+        object_entity_id=uuid4(),
+    )
+    gift_for_someone_else = gift_for_kevin.model_copy(
+        update={"id": uuid4(), "object_entity_id": uuid4()}
+    )
+
+    decision = engine.reconcile(existing_active=[gift_for_kevin], incoming=gift_for_someone_else)
+
+    assert decision.action == LifecycleAction.APPEND
+
+
+def test_same_object_entity_id_is_a_duplicate() -> None:
+    """Sanity check: identical object_entity_id (and everything else)
+    still collapses to a no-op, confirming the new comparison only adds a
+    dimension rather than breaking existing duplicate detection."""
+    engine = LifecycleEngine()
+    object_id = uuid4()
+    original = make_memory(
+        kind=MemoryKind.INTENT,
+        value="racket",
+        predicate="buy_for",
+        object_entity_id=object_id,
+    )
+    repeated_capture = original.model_copy(update={"id": uuid4()})
+
+    decision = engine.reconcile(existing_active=[original], incoming=repeated_capture)
+
+    assert decision.action == LifecycleAction.NOOP

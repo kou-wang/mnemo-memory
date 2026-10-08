@@ -39,20 +39,33 @@ The extractor must never write directly to storage.
 1. A `CURRENT_STATE` memory must have a `memory_key`.
 2. At most one active `CURRENT_STATE` memory may exist for a given user + memory key.
 3. A new value for the same current-state slot supersedes the previous active value.
-4. At most one active `FACT` memory may exist for a given subject + predicate. A
-   new value is treated as a correction: it supersedes (never deletes) the
-   previous active fact, preserving history and provenance.
+4. `FACT` has **no** single-active-slot invariant in Sprint 1. The engine
+   cannot infer from `MemoryKind.FACT` alone whether a predicate is
+   single-valued (e.g. `birthday`) or naturally multi-valued (e.g.
+   `has_child`, `owns_pet`, `phone_number`). A new fact with the same
+   subject + predicate but a different value therefore appends rather
+   than supersedes, so uncertain conflicts never silently retire history.
+   An exact duplicate fact is a no-op. Explicit correction/update
+   semantics (e.g. "Kevin's birthday is actually March 13") are a future
+   design that requires the caller to supply an unambiguous,
+   deterministic correction signal.
 5. `PREFERENCE` memories may coexist freely; a new preference never replaces
-   an unrelated one. Removing a preference is a status transition (e.g. to
-   `DELETED`), not an automatic side effect of adding another preference.
-6. `EVENT` memories are append-only except for duplicate/correction handling.
+   an unrelated one, and an exact duplicate is a no-op. Sprint 1 does not
+   implement natural-language preference removal ("Kevin doesn't like
+   whisky anymore"); when added, it must retire/end the prior memory via
+   explicit supersession or a validity window -- not `DELETED`.
+6. `EVENT` memories are append-only except for duplicate handling.
 7. `INTENT` memories may become completed, cancelled, expired, or deleted.
 8. Terminal statuses (`SUPERSEDED`, `COMPLETED`, `CANCELLED`, `EXPIRED`,
    `DELETED`) are final: once reached, a memory cannot transition to a
    different status.
-9. Terminal history is retained unless the user explicitly deletes data.
-10. Every persisted memory should retain provenance to its source capture when available.
-11. Retrieval should prefer structured/temporal lookup before semantic search.
+9. `DELETED` is reserved for explicit user/privacy deletion requests. It
+   must never be used to mean "this is no longer true" -- that is a
+   semantic invalidation (supersession, expiration, or a closed validity
+   window), not a data-deletion event.
+10. Terminal history is retained unless the user explicitly deletes data.
+11. Every persisted memory should retain provenance to its source capture when available.
+12. Retrieval should prefer structured/temporal lookup before semantic search.
 
 ## Memory key
 
