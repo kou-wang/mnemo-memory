@@ -32,8 +32,20 @@ See [docs/architecture.md](docs/architecture.md) and [docs/sprint-1-spec.md](doc
 python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
-pytest
+ruff check .
+mypy src
+pytest --cov=mnemo --cov-report=term-missing
+coverage report --include="*/mnemo/lifecycle/*" --fail-under=90
 ```
+
+These are the same gates run by CI on Python 3.11 and 3.12. The lifecycle
+coverage command fails below 90% without imposing that threshold on unrelated
+future packages.
+
+The workflow exposes stable `Quality gates (Python 3.11)` and
+`Quality gates (Python 3.12)` checks. Repository administrators must configure
+those checks as required in GitHub branch protection; the workflow itself
+cannot enable branch protection.
 
 ## License
 

@@ -61,20 +61,24 @@ historical records, and source provenance are explicit and reproducible.
 
 ### Issue #4 — CI and quality gates
 
-Next task.
+Implementation complete on the Sprint 1 branch; awaiting review.
 
-Required gates:
+CI now provides named quality checks on Python 3.11 and 3.12 for:
 - Ruff
-- mypy strict
-- pytest
-- lifecycle coverage >= 90%
-- Python 3.11 and 3.12 compatibility
+- strict mypy
+- the complete pytest suite with package coverage
+- a failing lifecycle-specific coverage threshold of 90%
+
+The same commands are documented for local use. Sprint 1 code work is complete
+pending final PR review. GitHub branch protection is not currently enabled on
+`main`; repository settings must require the named CI checks separately.
 
 ## Next
 
-1. Issue #4 — Tighten CI and quality gates
-2. Merge PR #6 when Sprint 1 is complete
-3. Sprint 2 — extraction/repository interfaces and conservative entity resolution
+1. Review Issue #4 — CI and quality gates
+2. Complete final review of PR #6
+3. Merge PR #6 after approval and required checks
+4. Sprint 2 — extraction/repository interfaces and conservative entity resolution
 
 ## Current constraints
 
