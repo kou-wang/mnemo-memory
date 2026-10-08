@@ -46,8 +46,9 @@ The extractor must never write directly to storage.
 
 ## Core interface boundaries
 
-Sprint 2 begins with provider-independent contracts; it does not select or
-implement providers or databases.
+Sprint 2 keeps provider-independent contracts authoritative while concrete
+implementations remain behind those boundaries. It does not select or implement
+a database.
 
 ### Capture
 
@@ -88,9 +89,25 @@ explicit user scope. Its result distinguishes a matched entity, an unmatched
 mention that may require later creation, and ambiguity with multiple candidates.
 The resolver does not persist or auto-merge; ADR-006 remains authoritative.
 
+`DeterministicEntityResolver` is the first concrete strategy. It reads only the
+requested user's entities through `EntityRepository` and compares the mention
+exactly after Unicode NFKC normalization, outer trimming, whitespace collapsing,
+and Unicode case folding. Canonical names and explicit aliases participate in
+matching. Punctuation, accents, and partial-name distinctions are preserved; no
+fuzzy, embedding, nickname, transliteration, or model-based inference occurs.
+
+Zero, one, or multiple distinct entity-id matches produce `UNMATCHED`, `MATCHED`,
+or `AMBIGUOUS`, respectively. Ambiguous results retain every distinct candidate
+in stable entity-id order and never select or merge one. Resolution is read-only:
+entity creation and alias changes remain future orchestration responsibilities.
+
 ### Persistence
 
 `CaptureRepository` persists and retrieves captures under explicit user scope.
+`EntityRepository` provides user-scoped entity lookup/listing plus explicit add
+for later orchestration; cross-user reads do not expose records, and cross-user
+writes fail closed.
+
 `MemoryRepository` reads active/user-scoped memory and exposes lifecycle writes
 as atomic operations:
 
@@ -174,7 +191,7 @@ The current interface layer intentionally excludes:
 - additional LLM provider implementations
 - PostgreSQL adapter
 - pgvector
-- concrete entity matching/merge heuristics
+- fuzzy or semantic entity candidate generation and entity merge operations
 - FastAPI
 - mobile app
 

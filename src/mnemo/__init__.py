@@ -1,8 +1,10 @@
 """Mnemo temporal memory engine."""
 
+from mnemo.entities import DeterministicEntityResolver, normalize_entity_name
 from mnemo.interfaces import (
     CaptureRepository,
     Clock,
+    EntityRepository,
     EntityResolution,
     EntityResolutionOutcome,
     EntityResolver,
@@ -22,9 +24,11 @@ __all__ = [
     "Capture",
     "CaptureRepository",
     "Clock",
+    "DeterministicEntityResolver",
     "Entity",
     "EntityResolution",
     "EntityResolutionOutcome",
+    "EntityRepository",
     "EntityResolver",
     "EntityType",
     "Extractor",
@@ -37,4 +41,5 @@ __all__ = [
     "MemoryStatus",
     "RepositoryInvariantError",
     "SourceType",
+    "normalize_entity_name",
 ]

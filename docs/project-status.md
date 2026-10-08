@@ -4,9 +4,9 @@ Last updated: 2026-10-08
 
 ## Current phase
 
-**Sprint 2 — OpenAI Structured Extraction (Issue #10)**
+**Sprint 2 — Deterministic Entity Resolution (Issue #12)**
 
-Working branch: `feat/openai-structured-extractor`
+Working branch: `feat/deterministic-entity-resolution`
 
 Sprint 1 PR: **#6 — merged**
 
@@ -14,7 +14,9 @@ Developer workflow PR: **#8 — merged**
 
 Core interfaces PR: **#9 — merged**
 
-Issue #10 implementation: **complete; awaiting maintainer review**
+OpenAI extractor PR: **#11 — merged**
+
+Issue #12 implementation: **complete; awaiting maintainer review**
 
 ## Completed
 
@@ -100,11 +102,9 @@ Implemented provider-independent contracts for:
 - atomic current-state supersession and explicit status transitions
 - injectable timezone-aware clocks
 
-## In progress
-
 ### Issue #10 — OpenAI Structured Outputs extractor
 
-Implementation complete; awaiting maintainer review.
+Completed and reviewed.
 
 Implemented:
 - an optional OpenAI SDK extra isolated under `mnemo.providers.openai`
@@ -118,26 +118,44 @@ Implemented:
 The extractor has no persistence, entity-resolution, or lifecycle authority.
 No storage backend or lifecycle semantic change is included.
 
+## In progress
+
+### Issue #12 — Deterministic entity resolution
+
+Implementation complete; awaiting maintainer review.
+
+Implemented:
+- a provider-independent, user-scoped `EntityRepository` contract
+- pure NFKC, whitespace, and casefold name normalization
+- exact canonical-name and explicit-alias matching
+- deterministic MATCHED / UNMATCHED / AMBIGUOUS outcomes
+- entity-id deduplication and stable ambiguous candidate ordering
+- fail-closed repository scope validation
+- read-only resolution with no entity creation, alias learning, or merge behavior
+- test-only repository fakes and behavior/contract coverage
+
 ## Next
 
-1. Review Issue #10 and its dedicated PR
-2. Later entity resolution, persistence, retrieval, and evaluation work
+1. Review Issue #12 and its dedicated PR
+2. Later persistence, retrieval, and evaluation work
 3. Consumer/mobile application work
 
 ## Current constraints
 
-Issue #10 adds only the first concrete extractor adapter and must not add:
+Issue #12 adds only the deterministic entity-resolution baseline and must not add:
 - FastAPI
 - PostgreSQL / SQLAlchemy
 - pgvector
 - Redis
+- fuzzy matching, edit distance, embeddings, or LLM resolution
+- automatic alias learning, entity creation, or entity merging
 - React Native / Expo code
 - authentication
 - billing
 - notifications
 - lifecycle semantic changes
-- repository writes or storage backends
-- entity resolution or lifecycle orchestration
+- concrete storage backends
+- capture-to-persistence or lifecycle orchestration
 
 ## Product direction
 
