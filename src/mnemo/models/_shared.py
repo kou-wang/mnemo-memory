@@ -8,9 +8,24 @@ pure and framework-independent: no I/O, no provider calls, no persistence.
 from __future__ import annotations
 
 import re
+from datetime import datetime
 
 _WHITESPACE_RUN = re.compile(r"\s+")
 _MEMORY_KEY_FORMAT = re.compile(r"^[^\s:]+:[^\s:]+$")
+
+
+def require_timezone_aware(value: datetime, *, field_name: str) -> datetime:
+    """Reject naive datetimes.
+
+    Comparing a naive and a timezone-aware datetime raises an incidental
+    ``TypeError`` from the standard library rather than a clear domain
+    error. Since the engine is temporal-first and treats time as
+    first-class data, every datetime must carry explicit timezone info
+    (prefer UTC) so that temporal comparisons never fail ambiguously.
+    """
+    if value.tzinfo is None or value.tzinfo.utcoffset(value) is None:
+        raise ValueError(f"{field_name} must be a timezone-aware datetime")
+    return value
 
 
 def require_non_blank(value: str, *, field_name: str) -> str:

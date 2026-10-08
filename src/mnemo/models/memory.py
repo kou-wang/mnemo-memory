@@ -18,9 +18,13 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
 
-from mnemo.models._shared import normalize_memory_key, require_non_blank
+from mnemo.models._shared import (
+    normalize_memory_key,
+    require_non_blank,
+    require_timezone_aware,
+)
 from mnemo.models.types import MemoryKind, MemoryStatus
 
 
@@ -79,6 +83,23 @@ class Memory(BaseModel):
             return None
         return normalize_memory_key(value)
 
+    @field_validator(
+        "observed_at",
+        "occurred_at",
+        "valid_from",
+        "valid_until",
+        "expires_at",
+        "created_at",
+        "updated_at",
+    )
+    @classmethod
+    def _require_timezone_aware(
+        cls, value: datetime | None, info: ValidationInfo
+    ) -> datetime | None:
+        if value is None:
+            return None
+        return require_timezone_aware(value, field_name=info.field_name or "datetime field")
+
     @model_validator(mode="after")
     def validate_temporal_bounds(self) -> Memory:
         if self.valid_from and self.valid_until and self.valid_until < self.valid_from:
@@ -89,11 +110,29 @@ class Memory(BaseModel):
 
     @model_validator(mode="after")
     def validate_current_state_requires_memory_key(self) -> Memory:
-        """Enforce architecture invariant: a CURRENT_STATE memory must
-        have a ``memory_key`` identifying its mutable state slot.
+        """Enforce architecture invariants for ``CURRENT_STATE`` memories.
+
+        - A ``memory_key`` identifying the mutable state slot is required.
+        - The ``memory_key`` must be exactly the canonical key derived from
+          this memory's own ``subject_entity_id`` and ``predicate`` (see
+          :meth:`build_memory_key`). Without this check, a caller could
+          supply an arbitrary ``memory_key`` that does not describe the
+          same subject/predicate, letting a memory get reconciled against
+          the wrong state slot.
         """
-        if self.kind == MemoryKind.CURRENT_STATE and self.memory_key is None:
+        if self.kind != MemoryKind.CURRENT_STATE:
+            return self
+
+        if self.memory_key is None:
             raise ValueError("CURRENT_STATE memories require a memory_key")
+
+        canonical_key = self.build_memory_key(self.subject_entity_id, self.predicate)
+        if self.memory_key != canonical_key:
+            raise ValueError(
+                "CURRENT_STATE memory_key must equal the canonical key derived from "
+                f"subject_entity_id and predicate (expected '{canonical_key}', "
+                f"got '{self.memory_key}')"
+            )
         return self
 
     @staticmethod

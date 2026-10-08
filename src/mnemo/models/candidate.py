@@ -13,9 +13,9 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
 
-from mnemo.models._shared import require_non_blank
+from mnemo.models._shared import require_non_blank, require_timezone_aware
 from mnemo.models.types import MemoryKind
 
 
@@ -53,6 +53,15 @@ class CandidateMemory(BaseModel):
     @classmethod
     def _validate_predicate(cls, value: str) -> str:
         return require_non_blank(value, field_name="predicate")
+
+    @field_validator("occurred_at", "valid_from", "valid_until", "expires_at")
+    @classmethod
+    def _require_timezone_aware(
+        cls, value: datetime | None, info: ValidationInfo
+    ) -> datetime | None:
+        if value is None:
+            return None
+        return require_timezone_aware(value, field_name=info.field_name or "datetime field")
 
     @model_validator(mode="after")
     def validate_temporal_bounds(self) -> CandidateMemory:

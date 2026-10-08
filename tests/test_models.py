@@ -245,3 +245,110 @@ def test_two_equivalent_memory_keys_normalize_to_the_same_value() -> None:
     key_a = Memory.build_memory_key(entity_id, "parked_at")
     key_b = Memory.build_memory_key(entity_id, "  PARKED   AT  ")
     assert key_a == key_b
+
+
+# ---------------------------------------------------------------------------
+# Memory: memory_key must be the canonical key for subject_entity_id/predicate
+# ---------------------------------------------------------------------------
+
+
+def test_current_state_memory_key_mismatched_predicate_is_rejected() -> None:
+    """memory_key must describe the same subject/predicate as the memory.
+
+    Otherwise a CURRENT_STATE memory could be reconciled against the
+    wrong state slot.
+    """
+    entity_id = uuid4()
+    with pytest.raises(ValidationError):
+        Memory(
+            user_id="user-1",
+            kind=MemoryKind.CURRENT_STATE,
+            subject_entity_id=entity_id,
+            predicate="parked_at",
+            value="A1",
+            # Built for a different predicate than this memory's own.
+            memory_key=Memory.build_memory_key(entity_id, "located_at"),
+        )
+
+
+def test_current_state_memory_key_mismatched_subject_is_rejected() -> None:
+    entity_id = uuid4()
+    other_entity_id = uuid4()
+    with pytest.raises(ValidationError):
+        Memory(
+            user_id="user-1",
+            kind=MemoryKind.CURRENT_STATE,
+            subject_entity_id=entity_id,
+            predicate="parked_at",
+            value="A1",
+            # Built for a different subject entity than this memory's own.
+            memory_key=Memory.build_memory_key(other_entity_id, "parked_at"),
+        )
+
+
+def test_current_state_memory_key_arbitrary_string_is_rejected() -> None:
+    entity_id = uuid4()
+    with pytest.raises(ValidationError):
+        Memory(
+            user_id="user-1",
+            kind=MemoryKind.CURRENT_STATE,
+            subject_entity_id=entity_id,
+            predicate="parked_at",
+            value="A1",
+            memory_key="some_other_slot:value",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Timezone-aware datetime enforcement
+# ---------------------------------------------------------------------------
+
+
+def test_memory_rejects_naive_valid_from() -> None:
+    kwargs = _base_memory_kwargs()
+    with pytest.raises(ValidationError):
+        Memory(**kwargs, valid_from=datetime(2024, 1, 1))  # naive, no tzinfo
+
+
+def test_memory_rejects_naive_occurred_at() -> None:
+    kwargs = _base_memory_kwargs()
+    with pytest.raises(ValidationError):
+        Memory(**kwargs, occurred_at=datetime(2024, 1, 1))  # naive, no tzinfo
+
+
+def test_memory_rejects_mixed_naive_and_aware_temporal_fields() -> None:
+    """A naive datetime must be rejected explicitly, rather than letting a
+    naive/aware comparison raise an incidental TypeError later.
+    """
+    kwargs = _base_memory_kwargs()
+    with pytest.raises(ValidationError) as exc_info:
+        Memory(
+            **kwargs,
+            valid_from=NOW,
+            valid_until=datetime(2024, 1, 1),  # naive, no tzinfo
+        )
+    assert "timezone-aware" in str(exc_info.value)
+
+
+def test_candidate_memory_rejects_naive_valid_from() -> None:
+    with pytest.raises(ValidationError):
+        CandidateMemory(
+            kind=MemoryKind.PREFERENCE,
+            subject="Kevin",
+            predicate="likes",
+            value="whisky",
+            valid_from=datetime(2024, 1, 1),  # naive, no tzinfo
+        )
+
+
+def test_candidate_memory_rejects_mixed_naive_and_aware_temporal_fields() -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        CandidateMemory(
+            kind=MemoryKind.INTENT,
+            subject="user",
+            predicate="buy",
+            value="racket",
+            valid_from=NOW,
+            valid_until=datetime(2024, 1, 1),  # naive, no tzinfo
+        )
+    assert "timezone-aware" in str(exc_info.value)
