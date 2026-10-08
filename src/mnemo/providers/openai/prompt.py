@@ -15,10 +15,16 @@ Use exactly these memory kinds:
 - EVENT: an occurrence, such as a workout or vehicle maintenance.
 - INTENT: a future want or action; separate shopping items are separate candidates.
 
-Use concise snake_case predicates. Keep entity mentions as written; do not resolve
-identity. Use structured values when useful. Interpret unambiguous relative time from
-the supplied capture timestamp, return only timezone-aware datetimes, and omit a time
-when its meaning is ambiguous.
+Use concise snake_case predicates. Keep entity mentions concise and grounded in the
+capture; do not resolve identity. Classify every subject mention and every object
+independently with exactly one entity type: person, place, object, activity, vehicle,
+organization, or other. Every candidate requires subject_type. Include object_type
+exactly when object is present; otherwise return both object and object_type as null.
+For first-person actions where the user is the remembered subject, use subject "me"
+and subject_type "person". Use "activity" only when the activity itself is the
+referenced entity, not merely because a person performed it. Use structured values
+when useful. Interpret unambiguous relative time from the supplied capture timestamp,
+return only timezone-aware datetimes, and omit a time when its meaning is ambiguous.
 
 Extraction interprets language only. Never decide persistence, entity merging,
 deduplication, supersession, deletion, expiration, or intent completion/cancellation.

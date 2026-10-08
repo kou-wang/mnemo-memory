@@ -5,7 +5,7 @@
     "reference_timestamp": "2026-10-08T15:00:00+00:00",
     "expected_count": 1,
     "expected": [
-      {"kind": "FACT", "subject": "Kevin", "predicate": "birthday", "value": "March 12"}
+      {"kind": "FACT", "subject": "Kevin", "subject_type": "person", "predicate": "birthday", "value": "March 12"}
     ]
   },
   {
@@ -14,7 +14,7 @@
     "reference_timestamp": "2026-10-08T16:00:00+00:00",
     "expected_count": 1,
     "expected": [
-      {"kind": "PREFERENCE", "subject": "Kevin", "predicate": "likes", "value": "Japanese whisky"}
+      {"kind": "PREFERENCE", "subject": "Kevin", "subject_type": "person", "predicate": "likes", "value": "Japanese whisky"}
     ]
   },
   {
@@ -23,7 +23,7 @@
     "reference_timestamp": "2026-10-08T17:00:00+00:00",
     "expected_count": 1,
     "expected": [
-      {"kind": "CURRENT_STATE", "subject": "my car", "predicate": "parked_at", "value": "P3 B12"}
+      {"kind": "CURRENT_STATE", "subject": "my car", "subject_type": "vehicle", "predicate": "parked_at", "value": "P3 B12"}
     ]
   },
   {
@@ -32,7 +32,7 @@
     "reference_timestamp": "2026-10-08T18:00:00+00:00",
     "expected_count": 1,
     "expected": [
-      {"kind": "CURRENT_STATE", "subject": "my passport", "predicate": "located_at", "value": "top drawer"}
+      {"kind": "CURRENT_STATE", "subject": "my passport", "subject_type": "object", "predicate": "located_at", "value": "top drawer"}
     ]
   },
   {
@@ -41,7 +41,7 @@
     "reference_timestamp": "2026-10-08T19:00:00+00:00",
     "expected_count": 1,
     "expected": [
-      {"kind": "EVENT", "subject": "me", "predicate": "bench_press", "value": {"weight_lb": 185, "reps": 5}}
+      {"kind": "EVENT", "subject": "me", "subject_type": "person", "predicate": "bench_press", "value": {"weight_lb": 185, "reps": 5}}
     ]
   },
   {
@@ -50,7 +50,7 @@
     "reference_timestamp": "2026-10-08T20:00:00+00:00",
     "expected_count": 1,
     "expected": [
-      {"kind": "EVENT", "subject": "my vehicle", "predicate": "oil_changed", "value": {"mileage": 42800, "unit": "mile"}}
+      {"kind": "EVENT", "subject": "my vehicle", "subject_type": "vehicle", "predicate": "oil_changed", "value": {"mileage": 42800, "unit": "mile"}}
     ]
   },
   {
@@ -59,7 +59,7 @@
     "reference_timestamp": "2026-10-08T21:00:00+00:00",
     "expected_count": 1,
     "expected": [
-      {"kind": "INTENT", "subject": "me", "predicate": "buy", "value": "AirPods"}
+      {"kind": "INTENT", "subject": "me", "subject_type": "person", "predicate": "buy", "value": "AirPods"}
     ]
   },
   {
@@ -68,9 +68,9 @@
     "reference_timestamp": "2026-10-08T22:00:00+00:00",
     "expected_count": 3,
     "expected": [
-      {"kind": "INTENT", "subject": "me", "predicate": "buy", "value": "eggs"},
-      {"kind": "INTENT", "subject": "me", "predicate": "buy", "value": "milk"},
-      {"kind": "INTENT", "subject": "me", "predicate": "buy", "value": "paper towels"}
+      {"kind": "INTENT", "subject": "me", "subject_type": "person", "predicate": "buy", "value": "eggs"},
+      {"kind": "INTENT", "subject": "me", "subject_type": "person", "predicate": "buy", "value": "milk"},
+      {"kind": "INTENT", "subject": "me", "subject_type": "person", "predicate": "buy", "value": "paper towels"}
     ]
   }
 ]

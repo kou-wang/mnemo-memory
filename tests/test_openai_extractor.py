@@ -11,7 +11,7 @@ from openai import OpenAI, OpenAIError
 from openai.lib._pydantic import to_strict_json_schema
 from pydantic import ValidationError
 
-from mnemo import CandidateMemory, Capture, MemoryKind, SourceType
+from mnemo import CandidateMemory, Capture, EntityType, MemoryKind, SourceType
 from mnemo.providers.openai import (
     OpenAIExtractor,
     OpenAIProviderError,
@@ -93,10 +93,12 @@ def _candidate(
     *,
     kind: MemoryKind,
     subject: str,
+    subject_type: EntityType,
     predicate: str,
     value: dict[str, object],
     category: str | None = None,
     object_mention: str | None = None,
+    object_type: EntityType | None = None,
     occurred_at: datetime | None = None,
     valid_from: datetime | None = None,
     valid_until: datetime | None = None,
@@ -106,8 +108,10 @@ def _candidate(
         kind=kind,
         category=category,
         subject=subject,
+        subject_type=subject_type,
         predicate=predicate,
         object=object_mention,
+        object_type=object_type,
         value=value,
         occurred_at=occurred_at,
         valid_from=valid_from,
@@ -132,8 +136,10 @@ def test_maps_structured_output_exactly_to_candidate_memory() -> None:
         kind=MemoryKind.EVENT,
         category="fitness",
         subject="me",
+        subject_type=EntityType.PERSON,
         predicate="bench_press",
         object_mention="barbell",
+        object_type=EntityType.OBJECT,
         value=_object(weight_lb=185, reps=5),
         occurred_at=occurred_at,
         valid_until=valid_until,
@@ -146,14 +152,18 @@ def test_maps_structured_output_exactly_to_candidate_memory() -> None:
             kind=MemoryKind.EVENT,
             category="fitness",
             subject="me",
+            subject_type=EntityType.PERSON,
             predicate="bench_press",
             object="barbell",
+            object_type=EntityType.OBJECT,
             value={"weight_lb": 185, "reps": 5},
             occurred_at=occurred_at,
             valid_until=valid_until,
         ),
     )
     assert result[0].__class__.__module__ == "mnemo.models.candidate"
+    assert not hasattr(result[0], "subject_entity_id")
+    assert not hasattr(result[0], "object_entity_id")
     assert not any(
         type(value).__module__.startswith("openai")
         for value in result[0].__dict__.values()
@@ -164,6 +174,7 @@ def test_maps_nested_json_values_without_provider_objects() -> None:
     provider_candidate = _candidate(
         kind=MemoryKind.EVENT,
         subject="me",
+        subject_type=EntityType.PERSON,
         predicate="workout_summary",
         value={
             "kind": "list",
@@ -196,8 +207,10 @@ def test_openai_strict_schema_uses_supported_union_constructs() -> None:
         "kind",
         "category",
         "subject",
+        "subject_type",
         "predicate",
         "object",
+        "object_type",
         "value",
         "occurred_at",
         "valid_from",
@@ -231,6 +244,7 @@ def test_valid_empty_extraction_returns_zero_candidates() -> None:
         "provider_candidate",
         "expected_kind",
         "expected_subject",
+        "expected_subject_type",
         "expected_predicate",
         "expected_value",
     ),
@@ -239,11 +253,13 @@ def test_valid_empty_extraction_returns_zero_candidates() -> None:
             _candidate(
                 kind=MemoryKind.FACT,
                 subject="Kevin",
+                subject_type=EntityType.PERSON,
                 predicate="birthday",
                 value=_text("March 12"),
             ),
             MemoryKind.FACT,
             "Kevin",
+            EntityType.PERSON,
             "birthday",
             "March 12",
         ),
@@ -251,11 +267,13 @@ def test_valid_empty_extraction_returns_zero_candidates() -> None:
             _candidate(
                 kind=MemoryKind.PREFERENCE,
                 subject="Kevin",
+                subject_type=EntityType.PERSON,
                 predicate="likes",
                 value=_text("Japanese whisky"),
             ),
             MemoryKind.PREFERENCE,
             "Kevin",
+            EntityType.PERSON,
             "likes",
             "Japanese whisky",
         ),
@@ -263,11 +281,13 @@ def test_valid_empty_extraction_returns_zero_candidates() -> None:
             _candidate(
                 kind=MemoryKind.CURRENT_STATE,
                 subject="my car",
+                subject_type=EntityType.VEHICLE,
                 predicate="parked_at",
                 value=_text("P3 B12"),
             ),
             MemoryKind.CURRENT_STATE,
             "my car",
+            EntityType.VEHICLE,
             "parked_at",
             "P3 B12",
         ),
@@ -275,11 +295,13 @@ def test_valid_empty_extraction_returns_zero_candidates() -> None:
             _candidate(
                 kind=MemoryKind.CURRENT_STATE,
                 subject="my passport",
+                subject_type=EntityType.OBJECT,
                 predicate="located_at",
                 value=_text("top drawer"),
             ),
             MemoryKind.CURRENT_STATE,
             "my passport",
+            EntityType.OBJECT,
             "located_at",
             "top drawer",
         ),
@@ -287,11 +309,13 @@ def test_valid_empty_extraction_returns_zero_candidates() -> None:
             _candidate(
                 kind=MemoryKind.EVENT,
                 subject="me",
+                subject_type=EntityType.PERSON,
                 predicate="bench_press",
                 value=_object(weight_lb=185, reps=5),
             ),
             MemoryKind.EVENT,
             "me",
+            EntityType.PERSON,
             "bench_press",
             {"weight_lb": 185, "reps": 5},
         ),
@@ -299,11 +323,13 @@ def test_valid_empty_extraction_returns_zero_candidates() -> None:
             _candidate(
                 kind=MemoryKind.EVENT,
                 subject="my vehicle",
+                subject_type=EntityType.VEHICLE,
                 predicate="oil_changed",
                 value=_object(mileage=42_800, unit="mile"),
             ),
             MemoryKind.EVENT,
             "my vehicle",
+            EntityType.VEHICLE,
             "oil_changed",
             {"mileage": 42_800, "unit": "mile"},
         ),
@@ -312,11 +338,13 @@ def test_valid_empty_extraction_returns_zero_candidates() -> None:
                 kind=MemoryKind.INTENT,
                 category="shopping",
                 subject="me",
+                subject_type=EntityType.PERSON,
                 predicate="buy",
                 value=_text("AirPods"),
             ),
             MemoryKind.INTENT,
             "me",
+            EntityType.PERSON,
             "buy",
             "AirPods",
         ),
@@ -326,6 +354,7 @@ def test_maps_established_memory_use_cases(
     provider_candidate: OpenAIExtractedCandidate,
     expected_kind: MemoryKind,
     expected_subject: str,
+    expected_subject_type: EntityType,
     expected_predicate: str,
     expected_value: object,
 ) -> None:
@@ -334,6 +363,7 @@ def test_maps_established_memory_use_cases(
     assert len(result) == 1
     assert result[0].kind == expected_kind
     assert result[0].subject == expected_subject
+    assert result[0].subject_type == expected_subject_type
     assert result[0].predicate == expected_predicate
     assert result[0].value == expected_value
 
@@ -344,12 +374,14 @@ def test_one_capture_can_produce_multiple_preferences() -> None:
             _candidate(
                 kind=MemoryKind.PREFERENCE,
                 subject="Kevin",
+                subject_type=EntityType.PERSON,
                 predicate="likes",
                 value=_text("Japanese whisky"),
             ),
             _candidate(
                 kind=MemoryKind.PREFERENCE,
                 subject="Kevin",
+                subject_type=EntityType.PERSON,
                 predicate="likes",
                 value=_text("tennis"),
             ),
@@ -366,6 +398,7 @@ def test_costco_capture_produces_three_independent_intents() -> None:
                 kind=MemoryKind.INTENT,
                 category="shopping:costco",
                 subject="me",
+                subject_type=EntityType.PERSON,
                 predicate="buy",
                 value=_text(item),
             )
@@ -376,6 +409,7 @@ def test_costco_capture_produces_three_independent_intents() -> None:
 
     assert [candidate.value for candidate in result] == ["eggs", "milk", "paper towels"]
     assert all(candidate.category == "shopping:costco" for candidate in result)
+    assert all(candidate.subject_type == EntityType.PERSON for candidate in result)
 
 
 def test_correction_like_fact_only_returns_new_candidate() -> None:
@@ -384,6 +418,7 @@ def test_correction_like_fact_only_returns_new_candidate() -> None:
             _candidate(
                 kind=MemoryKind.FACT,
                 subject="Kevin",
+                subject_type=EntityType.PERSON,
                 predicate="birthday",
                 value=_text("March 13"),
             )
@@ -430,6 +465,7 @@ def test_domain_invalid_provider_result_is_reported_as_unusable() -> None:
     provider_candidate = _candidate(
         kind=MemoryKind.CURRENT_STATE,
         subject="my car",
+        subject_type=EntityType.VEHICLE,
         predicate="parked_at",
         value=_text("P3 B12"),
         valid_from=datetime(2026, 10, 9, tzinfo=UTC),
@@ -465,8 +501,10 @@ def test_provider_schema_rejects_naive_datetimes_and_unknown_fields() -> None:
         "kind": "EVENT",
         "category": None,
         "subject": "me",
+        "subject_type": "person",
         "predicate": "bench_press",
         "object": None,
+        "object_type": None,
         "value": _text("set"),
         "occurred_at": "2026-10-08T12:00:00",
         "valid_from": None,
@@ -481,6 +519,37 @@ def test_provider_schema_rejects_naive_datetimes_and_unknown_fields() -> None:
     base["unexpected"] = "not allowed"
     with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
         OpenAIExtractedCandidate.model_validate(base)
+
+
+@pytest.mark.parametrize(
+    ("object_mention", "object_type", "message"),
+    [
+        ("Acme", None, "object_type is required"),
+        (None, "organization", "object_type must be None"),
+    ],
+)
+def test_provider_schema_rejects_inconsistent_object_types(
+    object_mention: str | None,
+    object_type: str | None,
+    message: str,
+) -> None:
+    with pytest.raises(ValidationError, match=message):
+        OpenAIExtractedCandidate.model_validate(
+            {
+                "kind": "FACT",
+                "category": None,
+                "subject": "Kevin",
+                "subject_type": "person",
+                "predicate": "works_at",
+                "object": object_mention,
+                "object_type": object_type,
+                "value": _text("employment"),
+                "occurred_at": None,
+                "valid_from": None,
+                "valid_until": None,
+                "expires_at": None,
+            }
+        )
 
 
 def test_evaluation_seed_covers_established_scenarios() -> None:
@@ -500,12 +569,31 @@ def test_evaluation_seed_covers_established_scenarios() -> None:
     assert all(case["input"] and case["expected"] for case in cases)
     assert all(case["expected_count"] == len(case["expected"]) for case in cases)
     assert all(datetime.fromisoformat(case["reference_timestamp"]).tzinfo for case in cases)
+    assert all(
+        candidate["subject_type"] in {entity_type.value for entity_type in EntityType}
+        and (("object" in candidate) == ("object_type" in candidate))
+        for case in cases
+        for candidate in case["expected"]
+    )
     assert next(case for case in cases if case["name"] == "costco_intents")["expected"] == [
-        {"kind": "INTENT", "subject": "me", "predicate": "buy", "value": "eggs"},
-        {"kind": "INTENT", "subject": "me", "predicate": "buy", "value": "milk"},
         {
             "kind": "INTENT",
             "subject": "me",
+            "subject_type": "person",
+            "predicate": "buy",
+            "value": "eggs",
+        },
+        {
+            "kind": "INTENT",
+            "subject": "me",
+            "subject_type": "person",
+            "predicate": "buy",
+            "value": "milk",
+        },
+        {
+            "kind": "INTENT",
+            "subject": "me",
+            "subject_type": "person",
             "predicate": "buy",
             "value": "paper towels",
         },

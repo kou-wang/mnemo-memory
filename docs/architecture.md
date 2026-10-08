@@ -67,6 +67,11 @@ Capture and Memory remain distinct. One Capture may produce zero, one, or many
 `CandidateMemory` values. It interprets language only and has no persistence or
 lifecycle authority.
 
+Each candidate carries an unresolved subject mention plus an explicit
+`EntityType` classification, and an object mention must carry its own type when
+present. These types are probabilistic interpretation hints for future entity
+creation; candidates do not contain persisted entity identifiers.
+
 `OpenAIExtractor` is the first concrete adapter behind this boundary. All SDK,
 Responses API, prompt, and provider response-schema details live under
 `mnemo.providers.openai`; the domain models, lifecycle engine, and
@@ -101,6 +106,8 @@ Zero, one, or multiple distinct entity-id matches produce `UNMATCHED`, `MATCHED`
 or `AMBIGUOUS`, respectively. Ambiguous results retain every distinct candidate
 in stable entity-id order and never select or merge one. Resolution is read-only:
 entity creation and alias changes remain future orchestration responsibilities.
+Extracted entity types do not participate in this matching decision and must not
+silently disambiguate identities with the same normalized name or alias.
 
 ### Persistence
 

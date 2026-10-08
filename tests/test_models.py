@@ -61,20 +61,87 @@ def test_entity_rejects_blank_alias() -> None:
 
 def test_candidate_memory_rejects_blank_subject() -> None:
     with pytest.raises(ValidationError):
-        CandidateMemory(kind=MemoryKind.FACT, subject="   ", predicate="birthday", value="3-12")
+        CandidateMemory(
+            kind=MemoryKind.FACT,
+            subject="   ",
+            subject_type=EntityType.PERSON,
+            predicate="birthday",
+            value="3-12",
+        )
 
 
 def test_candidate_memory_rejects_blank_predicate() -> None:
     with pytest.raises(ValidationError):
-        CandidateMemory(kind=MemoryKind.FACT, subject="Kevin", predicate=" ", value="3-12")
+        CandidateMemory(
+            kind=MemoryKind.FACT,
+            subject="Kevin",
+            subject_type=EntityType.PERSON,
+            predicate=" ",
+            value="3-12",
+        )
 
 
 def test_candidate_memory_strips_subject_and_predicate() -> None:
     candidate = CandidateMemory(
-        kind=MemoryKind.FACT, subject=" Kevin ", predicate=" birthday ", value="3-12"
+        kind=MemoryKind.FACT,
+        subject=" Kevin ",
+        subject_type=EntityType.PERSON,
+        predicate=" birthday ",
+        value="3-12",
     )
     assert candidate.subject == "Kevin"
     assert candidate.predicate == "birthday"
+
+
+def test_candidate_memory_requires_subject_type() -> None:
+    with pytest.raises(ValidationError, match="subject_type"):
+        CandidateMemory.model_validate(
+            {
+                "kind": MemoryKind.FACT,
+                "subject": "Kevin",
+                "predicate": "birthday",
+                "value": "3-12",
+            }
+        )
+
+
+def test_candidate_memory_accepts_object_with_object_type() -> None:
+    candidate = CandidateMemory(
+        kind=MemoryKind.FACT,
+        subject="Kevin",
+        subject_type=EntityType.PERSON,
+        predicate="works_at",
+        object="Acme",
+        object_type=EntityType.ORGANIZATION,
+        value=True,
+    )
+
+    assert candidate.object == "Acme"
+    assert candidate.object_type == EntityType.ORGANIZATION
+
+
+def test_candidate_memory_rejects_object_without_object_type() -> None:
+    with pytest.raises(ValidationError, match="object_type is required"):
+        CandidateMemory(
+            kind=MemoryKind.FACT,
+            subject="Kevin",
+            subject_type=EntityType.PERSON,
+            predicate="works_at",
+            object="Acme",
+            value=True,
+        )
+
+
+def test_candidate_memory_rejects_object_type_without_object() -> None:
+    with pytest.raises(ValidationError, match="object_type must be None"):
+        CandidateMemory(
+            kind=MemoryKind.FACT,
+            subject="Kevin",
+            subject_type=EntityType.PERSON,
+            predicate="works_at",
+            object_type=EntityType.ORGANIZATION,
+            value=True,
+        )
 
 
 def test_candidate_memory_rejects_valid_until_before_valid_from() -> None:
@@ -82,6 +149,7 @@ def test_candidate_memory_rejects_valid_until_before_valid_from() -> None:
         CandidateMemory(
             kind=MemoryKind.PREFERENCE,
             subject="Kevin",
+            subject_type=EntityType.PERSON,
             predicate="likes",
             value="whisky",
             valid_from=NOW,
@@ -94,6 +162,7 @@ def test_candidate_memory_rejects_expires_at_before_valid_from() -> None:
         CandidateMemory(
             kind=MemoryKind.INTENT,
             subject="user",
+            subject_type=EntityType.PERSON,
             predicate="buy",
             value="racket",
             valid_from=NOW,
@@ -105,6 +174,7 @@ def test_candidate_memory_accepts_consistent_temporal_bounds() -> None:
     candidate = CandidateMemory(
         kind=MemoryKind.INTENT,
         subject="user",
+        subject_type=EntityType.PERSON,
         predicate="buy",
         value="racket",
         valid_from=NOW,
@@ -120,6 +190,7 @@ def test_candidate_memory_rejects_out_of_range_confidence() -> None:
         CandidateMemory(
             kind=MemoryKind.FACT,
             subject="Kevin",
+            subject_type=EntityType.PERSON,
             predicate="birthday",
             value="3-12",
             confidence=1.5,
@@ -372,6 +443,7 @@ def test_candidate_memory_rejects_naive_valid_from() -> None:
         CandidateMemory(
             kind=MemoryKind.PREFERENCE,
             subject="Kevin",
+            subject_type=EntityType.PERSON,
             predicate="likes",
             value="whisky",
             valid_from=datetime(2024, 1, 1),  # naive, no tzinfo
@@ -383,6 +455,7 @@ def test_candidate_memory_rejects_mixed_naive_and_aware_temporal_fields() -> Non
         CandidateMemory(
             kind=MemoryKind.INTENT,
             subject="user",
+            subject_type=EntityType.PERSON,
             predicate="buy",
             value="racket",
             valid_from=NOW,
