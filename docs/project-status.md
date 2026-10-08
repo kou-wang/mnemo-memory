@@ -77,7 +77,7 @@ administrators configure required checks separately.
 
 ### Issue #7 — Shared agent workflow
 
-Implementation complete on PR #8; awaiting maintainer review.
+Implementation reviewed and approved on PR #8; ready to merge after CI remains green.
 
 Scope:
 - canonical cross-agent guidance in root `AGENTS.md`
@@ -88,7 +88,7 @@ Scope:
 
 ## Next
 
-1. Review and merge Issue #7
+1. Merge PR #8 / Issue #7
 2. Issue #5 — Sprint 2 extraction and storage interfaces
 3. Later extraction, entity resolution, persistence, retrieval, and evaluation work
 4. Consumer/mobile application work
