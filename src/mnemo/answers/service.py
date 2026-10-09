@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
 from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -16,7 +15,7 @@ from mnemo.answers.models import (
 from mnemo.models._shared import require_non_blank, require_timezone_aware
 from mnemo.models.memory import Memory
 from mnemo.models.types import MemoryKind
-from mnemo.recall.models import RecallExecutionOutcome
+from mnemo.recall.models import RecallExecutionOutcome, RecallExecutionResult
 from mnemo.recall.orchestration import RecallOrchestrationService
 
 if TYPE_CHECKING:
@@ -74,7 +73,11 @@ class RecallAnswerService:
             evidence=evidence,
             asked_at=reference_time,
         )
-        self._validate_synthesis(synthesized=synthesized, evidence=evidence)
+        self._validate_synthesis(
+            synthesized=synthesized,
+            evidence=evidence,
+            recall_result=recall_result,
+        )
 
         return RecallAnswerResult(
             outcome=(
@@ -103,6 +106,7 @@ class RecallAnswerService:
         *,
         synthesized: SynthesizedAnswer,
         evidence: tuple[Memory, ...],
+        recall_result: RecallExecutionResult,
     ) -> None:
         cited_ids = synthesized.cited_memory_ids
         if not cited_ids:
@@ -119,10 +123,11 @@ class RecallAnswerService:
                 "grounded answer cites memory ids outside the supplied evidence"
             )
 
-        required_conflict_ids = _conflicting_fact_ids(evidence)
-        if not required_conflict_ids.issubset(cited_ids):
+        required_fact_ids = _multi_fact_request_ids(recall_result)
+        if not required_fact_ids.issubset(cited_ids):
             raise RecallAnswerInvariantError(
-                "grounded answer must cite every conflicting FACT memory"
+                "grounded answer must cite every FACT memory returned by a "
+                "multi-memory FACT request"
             )
 
 
@@ -140,15 +145,16 @@ def _non_synthesis_outcome(
     }.get(outcome)
 
 
-def _conflicting_fact_ids(evidence: tuple[Memory, ...]) -> set[UUID]:
-    groups: defaultdict[tuple[UUID, str], list[Memory]] = defaultdict(list)
-    for memory in evidence:
-        if memory.kind == MemoryKind.FACT:
-            groups[(memory.subject_entity_id, memory.predicate)].append(memory)
-
-    conflicting_ids: set[UUID] = set()
-    for memories in groups.values():
-        first_value = memories[0].value
-        if any(memory.value != first_value for memory in memories[1:]):
-            conflicting_ids.update(memory.id for memory in memories)
-    return conflicting_ids
+def _multi_fact_request_ids(recall_result: RecallExecutionResult) -> set[UUID]:
+    required_ids: set[UUID] = set()
+    for execution in recall_result.executions:
+        if execution.request.kind != MemoryKind.FACT:
+            continue
+        fact_memories = tuple(
+            memory
+            for memory in execution.result.memories
+            if memory.kind == MemoryKind.FACT
+        )
+        if len(fact_memories) > 1:
+            required_ids.update(memory.id for memory in fact_memories)
+    return required_ids

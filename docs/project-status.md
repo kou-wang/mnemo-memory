@@ -235,7 +235,7 @@ Implemented:
 - deterministic no-evidence and abstention handling without synthesis calls
 - exact grounded evidence handoff for found and partial recall
 - validated memory-id citations with fail-closed foreign/unknown citation checks
-- preserved conflicting facts, multiple preferences, ordering, and provenance
+- preserved multi-memory facts, multiple preferences, ordering, and provenance
 - OpenAI Responses API strict Structured Outputs adapter with sanitized failures
 - minimal provider evidence payloads that exclude user ids and internal objects
 - offline provider/schema coverage and real PostgreSQL end-to-end answer coverage

@@ -60,8 +60,8 @@ provider-independent execution of those exact requests through deterministic
 structured recall, retaining per-request results and grounded provenance while
 preserving planner abstention. Issue #26 adds grounded answer synthesis over only
 that evidence, with deterministic abstention, validated memory citations,
-conflict preservation, and an explicitly partial answer path. Category-aware
-aggregation and semantic/hybrid retrieval remain later work.
+conservative multi-value preservation, and an explicitly partial answer path.
+Category-aware aggregation and semantic/hybrid retrieval remain later work.
 Semantic/vector lookup is a fallback or augmentation after structured retrieval,
 not the primary path.
 

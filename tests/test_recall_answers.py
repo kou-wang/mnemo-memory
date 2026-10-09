@@ -326,7 +326,7 @@ def test_synthesized_answer_model_rejects_blank_text_and_duplicate_citations() -
         SynthesizedAnswer(text="Answer", cited_memory_ids=(_id(1), _id(1)))
 
 
-def test_conflicting_fact_evidence_must_all_be_cited() -> None:
+def test_multiple_birthday_facts_remain_available_and_must_all_be_cited() -> None:
     first = _memory(10, value="March 12")
     second = _memory(11, value="March 13")
     recall_result = _recall_result(
@@ -338,18 +338,47 @@ def test_conflicting_fact_evidence_must_all_be_cited() -> None:
         SynthesizedAnswer(text="March 12.", cited_memory_ids=(first.id,)),
     )
 
-    with pytest.raises(RecallAnswerInvariantError, match="every conflicting FACT"):
+    with pytest.raises(RecallAnswerInvariantError, match="every FACT memory"):
         _answer(incomplete)
     assert incomplete_synthesizer.calls[0][1] == (first, second)
 
     complete, _, _ = _service(
         recall_result,
         SynthesizedAnswer(
-            text="Saved birthdays conflict: March 12 and March 13.",
+            text="The saved birthday values are March 12 and March 13.",
             cited_memory_ids=(first.id, second.id),
         ),
     )
     assert _answer(complete).cited_memory_ids == (first.id, second.id)
+
+
+def test_legitimate_multi_valued_facts_are_preserved_and_must_all_be_cited() -> None:
+    first = _memory(12, predicate="phone_number", value="555-1111")
+    second = _memory(13, predicate="phone_number", value="555-2222")
+    recall_result = _recall_result(
+        RecallExecutionOutcome.FOUND,
+        memories=(first, second),
+    )
+    incomplete, _, synthesizer = _service(
+        recall_result,
+        SynthesizedAnswer(text="Kevin's number is 555-1111.", cited_memory_ids=(first.id,)),
+    )
+
+    with pytest.raises(RecallAnswerInvariantError, match="every FACT memory"):
+        _answer(incomplete)
+    assert synthesizer.calls[0][1] == (first, second)
+
+    complete, _, _ = _service(
+        recall_result,
+        SynthesizedAnswer(
+            text="Kevin has 555-1111 and 555-2222 saved.",
+            cited_memory_ids=(first.id, second.id),
+        ),
+    )
+    result = _answer(complete)
+
+    assert result.evidence == (first, second)
+    assert result.cited_memory_ids == (first.id, second.id)
 
 
 def test_foreign_evidence_fails_before_synthesis() -> None:

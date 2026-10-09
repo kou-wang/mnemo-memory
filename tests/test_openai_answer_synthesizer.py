@@ -231,13 +231,15 @@ def test_provider_error_is_sanitized() -> None:
     assert secret not in str(raised.value)
 
 
-def test_prompt_requires_grounding_conflict_handling_and_citations() -> None:
+def test_prompt_requires_grounding_multi_fact_preservation_and_citations() -> None:
     prompt = ANSWER_SYNTHESIS_INSTRUCTIONS.lower()
 
     assert "only the supplied" in prompt
     assert "never use world knowledge" in prompt
-    assert "conflict" in prompt
-    assert "cite every conflicting memory" in prompt
+    assert "legitimate coexistence or conflicting" in prompt
+    assert "cite them all" in prompt
+    assert "never silently select one" in prompt
+    assert "only when the question and evidence semantics" in prompt
     assert "citation ids" in prompt
     assert "retrieve additional" in prompt
 

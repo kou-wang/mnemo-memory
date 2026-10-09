@@ -287,9 +287,11 @@ recall result.
 
 Before returning an answer, deterministic code validates every citation against
 the supplied memory ids and fails closed on unknown, missing, or duplicate
-citations. Conflicting facts remain in the evidence set and every memory in a
-conflicting fact group must be cited; synthesis may surface the conflict but may
-not select one value as truth. Provenance remains attached to the unchanged
+citations. When one structured FACT request returns multiple memories, every one
+must be cited. Deterministic answer code does not infer cardinality or label
+different FACT values as conflicting: they may legitimately coexist or represent
+uncertain saved information. Synthesis preserves and reports the supplied values
+without silently selecting one. Provenance remains attached to the unchanged
 evidence models. Semantic/vector fallback remains later work.
 
 ### Time

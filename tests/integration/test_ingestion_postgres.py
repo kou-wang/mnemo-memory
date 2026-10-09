@@ -1255,7 +1255,7 @@ def test_answer_path_returns_cited_parking_evidence_with_provenance_and_isolatio
     assert all(memory.user_id == USER_ID for memory in synthesizer.calls[0][1])
 
 
-def test_answer_path_preserves_conflicting_facts_and_multiple_preferences(
+def test_answer_path_preserves_multiple_fact_values_and_preferences(
     ingestion_repositories: tuple[
         PostgresCaptureRepository,
         PostgresEntityRepository,
@@ -1298,6 +1298,17 @@ def test_answer_path_preserves_conflicting_facts_and_multiple_preferences(
         for value in ("coffee", "jazz")
     )
     ingestion.ingest(_capture(312, "Kevin likes coffee and jazz."))
+    extractor.candidates = tuple(
+        _candidate(
+            kind=MemoryKind.FACT,
+            subject="Kevin",
+            subject_type=EntityType.PERSON,
+            predicate="phone_number",
+            value=value,
+        )
+        for value in ("555-1111", "555-2222")
+    )
+    ingestion.ingest(_capture(313, "Kevin's numbers are 555-1111 and 555-2222."))
     requests = (
         _recall_request(
             subject="Kevin",
@@ -1311,6 +1322,12 @@ def test_answer_path_preserves_conflicting_facts_and_multiple_preferences(
             predicate="likes",
             mode=RecallMode.ACTIVE,
         ),
+        _recall_request(
+            subject="Kevin",
+            kind=MemoryKind.FACT,
+            predicate="phone_number",
+            mode=RecallMode.CURRENT,
+        ),
     )
     answer_service, synthesizer = _answer_service(
         requests=requests,
@@ -1320,7 +1337,7 @@ def test_answer_path_preserves_conflicting_facts_and_multiple_preferences(
 
     result = answer_service.answer(
         user_id=USER_ID,
-        question="When is Kevin's birthday and what does he like?",
+        question="What birthdays, preferences, and phone numbers are saved for Kevin?",
         asked_at=NOW,
     )
 
@@ -1330,6 +1347,8 @@ def test_answer_path_preserves_conflicting_facts_and_multiple_preferences(
         "March 13",
         "coffee",
         "jazz",
+        "555-1111",
+        "555-2222",
     }
     assert result.cited_memory_ids == tuple(memory.id for memory in result.evidence)
     assert synthesizer.calls[0][1] == result.evidence

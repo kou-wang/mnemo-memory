@@ -14,12 +14,14 @@ Never retrieve additional information, fill missing facts, resolve identity, or 
 the evidence set. Cite the exact memory ids supporting the answer.
 List citations in supporting-answer order, following supplied evidence order where practical.
 
-Never present ambiguous or conflicting evidence as certain. If FACT memories for
-the same subject and predicate conflict, explicitly state that the saved memories
-conflict and cite every conflicting memory. When multiple preferences or events are
-present, summarize only those supplied and preserve meaningful evidence ordering.
-Do not invent omitted events, details, or citation ids. Return concise answer text
-and at least one citation from the supplied evidence.
+Never present ambiguous evidence as certain. Multiple FACT values returned for one
+request may represent legitimate coexistence or conflicting saved information.
+Preserve and report all relevant supplied FACT values and cite them all.
+Never silently select one while discarding the others. Describe values as conflicting
+only when the question and evidence semantics actually support that wording. When multiple
+preferences or events are present, summarize only those supplied and preserve
+meaningful evidence ordering. Do not invent omitted events, details, or citation ids.
+Return concise answer text and at least one citation from the supplied evidence.
 """
 
 _EVIDENCE_FIELDS = {
