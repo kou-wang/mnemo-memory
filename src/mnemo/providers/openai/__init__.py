@@ -1,5 +1,11 @@
-"""OpenAI Structured Outputs extraction adapter."""
+"""OpenAI Structured Outputs adapters."""
 
+from mnemo.providers.openai.answer_synthesizer import (
+    OpenAIAnswerProviderError,
+    OpenAIAnswerResponseError,
+    OpenAIAnswerSynthesisError,
+    OpenAIAnswerSynthesizer,
+)
 from mnemo.providers.openai.extractor import (
     OpenAIExtractionError,
     OpenAIExtractor,
@@ -14,6 +20,10 @@ from mnemo.providers.openai.recall_planner import (
 )
 
 __all__ = [
+    "OpenAIAnswerProviderError",
+    "OpenAIAnswerResponseError",
+    "OpenAIAnswerSynthesisError",
+    "OpenAIAnswerSynthesizer",
     "OpenAIExtractionError",
     "OpenAIExtractor",
     "OpenAIProviderError",

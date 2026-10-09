@@ -204,9 +204,10 @@ multiple preferences remain separate evidence rather than being guessed away.
 
 Recall creates no entities, performs no lifecycle changes, preserves each
 memory's source-capture provenance, and stops at typed evidence. Natural-
-language query interpretation and answer synthesis are later layers. Semantic
-or vector retrieval remains a fallback or augmentation after structured and
-temporal lookup, not the primary path.
+language query interpretation and grounded answer synthesis are downstream
+layers with no authority to alter this evidence. Semantic or vector retrieval
+remains a future fallback or augmentation after structured and temporal lookup,
+not the primary path.
 
 ### Natural-language recall planning
 
@@ -237,8 +238,8 @@ clock or guess.
 
 The planner has no repository, entity-resolution, retrieval, persistence,
 lifecycle, truth-evaluation, or answer-synthesis authority. Structured recall
-execution remains deterministic. Semantic fallback and natural-language answer
-synthesis remain later work.
+execution remains deterministic. Grounded answer synthesis is a separate
+downstream boundary; semantic fallback remains later work.
 
 ### Recall execution orchestration
 
@@ -256,6 +257,42 @@ and subject-type-conflict cases; they do not merge memories or synthesize a
 natural-language answer. Planner/provider failures and structured-recall
 invariant failures propagate to the caller. Memory provenance remains unchanged
 through this read-only layer.
+
+### Grounded answer synthesis
+
+`RecallAnswerService` composes completed recall execution with a provider-
+independent `AnswerSynthesizer`:
+
+```text
+Natural-language question
+  -> RecallPlanner
+  -> deterministic structured recall
+  -> grounded Memory evidence
+  -> AnswerSynthesizer
+  -> user-facing text + cited memory ids
+```
+
+Deterministic recall remains the sole owner of the evidence set. The synthesizer
+receives exactly the ordered `Memory` evidence already returned by recall and has
+no repository, resolver, lifecycle, persistence, or fallback-retrieval authority.
+The OpenAI adapter serializes only the minimal evidence fields needed for
+phrasing and does not send the user id. Its strict provider-local result maps to
+provider-independent answer models.
+
+`NOT_FOUND`, `UNSUPPORTED`, ambiguous-plan, ambiguous-subject, and subject-type-
+conflict outcomes bypass synthesis. Missing evidence returns the stable message
+`I don't have that saved.` without an LLM call. `PARTIAL` recall may phrase its
+available evidence but remains explicitly partial and retains every per-request
+recall result.
+
+Before returning an answer, deterministic code validates every citation against
+the supplied memory ids and fails closed on unknown, missing, or duplicate
+citations. When one structured FACT request returns multiple memories, every one
+must be cited. Deterministic answer code does not infer cardinality or label
+different FACT values as conflicting: they may legitimately coexist or represent
+uncertain saved information. Synthesis preserves and reports the supplied values
+without silently selecting one. Provenance remains attached to the unchanged
+evidence models. Semantic/vector fallback remains later work.
 
 ### Time
 
@@ -327,7 +364,6 @@ The current interface layer intentionally excludes:
 - fuzzy or semantic entity candidate generation and entity merge operations
 - FastAPI
 - mobile app
-- natural-language answer synthesis
 - semantic/vector retrieval and ranking
 
 These may be added only through later scoped Issues after the contracts and
