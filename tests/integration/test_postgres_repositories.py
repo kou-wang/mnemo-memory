@@ -152,7 +152,7 @@ def _memory(
     )
 
 
-def test_migration_is_at_head_and_installs_active_slot_index(postgres_engine: Engine) -> None:
+def test_migration_is_at_head_and_installs_required_indexes(postgres_engine: Engine) -> None:
     with postgres_engine.connect() as connection:
         revision = MigrationContext.configure(connection).get_current_revision()
         index_definition = connection.scalar(
@@ -162,13 +162,22 @@ def test_migration_is_at_head_and_installs_active_slot_index(postgres_engine: En
                 "AND indexname = 'uq_memories_active_current_state_slot'"
             )
         )
+        recall_index = connection.scalar(
+            text(
+                "SELECT indexdef FROM pg_indexes "
+                "WHERE schemaname = current_schema() "
+                "AND indexname = 'ix_memories_structured_recall'"
+            )
+        )
 
-    assert revision == "20261008_0001"
+    assert revision == "20261009_0002"
     assert index_definition is not None
     assert "UNIQUE INDEX" in index_definition
     assert "WHERE" in index_definition
     assert "CURRENT_STATE" in index_definition
     assert "ACTIVE" in index_definition
+    assert recall_index is not None
+    assert "user_id, subject_entity_id, kind, status, predicate" in recall_index
 
 
 def test_capture_round_trip_scope_duplicates_and_exact_provenance(

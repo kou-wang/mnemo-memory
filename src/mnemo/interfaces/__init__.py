@@ -7,6 +7,7 @@ from mnemo.interfaces.entities import (
     EntityResolver,
 )
 from mnemo.interfaces.extraction import Extractor
+from mnemo.interfaces.queries import MemoryQuery, MemoryQueryOrder, MemoryQueryRepository
 from mnemo.interfaces.repositories import (
     CaptureRepository,
     EntityRepository,
@@ -23,5 +24,8 @@ __all__ = [
     "EntityResolver",
     "Extractor",
     "MemoryRepository",
+    "MemoryQuery",
+    "MemoryQueryOrder",
+    "MemoryQueryRepository",
     "RepositoryInvariantError",
 ]

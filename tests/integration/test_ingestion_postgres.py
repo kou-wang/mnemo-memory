@@ -21,13 +21,21 @@ from mnemo.lifecycle.engine import LifecycleEngine
 from mnemo.models.candidate import CandidateMemory
 from mnemo.models.capture import Capture, SourceType
 from mnemo.models.entity import Entity, EntityType
+from mnemo.models.memory import Memory
 from mnemo.models.types import MemoryKind, MemoryStatus
 from mnemo.persistence.postgres.repositories import (
     PostgresCaptureRepository,
     PostgresEntityRepository,
+    PostgresMemoryQueryRepository,
     PostgresMemoryRepository,
 )
 from mnemo.persistence.postgres.session import create_postgres_engine, create_session_factory
+from mnemo.recall import (
+    RecallMode,
+    RecallOutcome,
+    StructuredRecallRequest,
+    StructuredRecallService,
+)
 
 pytestmark = pytest.mark.postgres
 
@@ -81,6 +89,11 @@ def ingestion_repositories(
         PostgresEntityRepository(factory),
         PostgresMemoryRepository(factory),
     )
+
+
+@pytest.fixture
+def query_repository(ingestion_postgres_engine: Engine) -> PostgresMemoryQueryRepository:
+    return PostgresMemoryQueryRepository(create_session_factory(ingestion_postgres_engine))
 
 
 class FakeExtractor:
@@ -149,6 +162,37 @@ def _service(
         memory_repository=memories,
         clock=FixedClock(NOW),
         lifecycle_engine=LifecycleEngine(),
+    )
+
+
+def _recall_service(
+    *,
+    entities: PostgresEntityRepository,
+    queries: PostgresMemoryQueryRepository,
+) -> StructuredRecallService:
+    return StructuredRecallService(
+        entity_resolver=DeterministicEntityResolver(entities),
+        memory_query_repository=queries,
+        clock=FixedClock(NOW),
+    )
+
+
+def _recall_request(
+    *,
+    subject: str,
+    kind: MemoryKind,
+    predicate: str,
+    mode: RecallMode,
+    user_id: str = USER_ID,
+    limit: int = 20,
+) -> StructuredRecallRequest:
+    return StructuredRecallRequest(
+        user_id=user_id,
+        subject=subject,
+        kind=kind,
+        predicate=predicate,
+        mode=mode,
+        limit=limit,
     )
 
 
@@ -406,3 +450,322 @@ def test_ingestion_keeps_entities_and_memories_isolated_by_user(
     assert entities.list_for_user(user_id=OTHER_USER_ID) == (foreign,)
     assert len(memories.list_active(user_id=USER_ID)) == 1
     assert memories.list_active(user_id=OTHER_USER_ID) == ()
+
+
+def test_recall_current_locations_after_ingestion_supersession_and_user_isolation(
+    ingestion_repositories: tuple[
+        PostgresCaptureRepository,
+        PostgresEntityRepository,
+        PostgresMemoryRepository,
+    ],
+    query_repository: PostgresMemoryQueryRepository,
+) -> None:
+    captures, entities, memories = ingestion_repositories
+    extractor = FakeExtractor(
+        [
+            _candidate(
+                kind=MemoryKind.CURRENT_STATE,
+                subject="my car",
+                subject_type=EntityType.VEHICLE,
+                predicate="parked_at",
+                value="A1",
+            )
+        ]
+    )
+    ingestion = _service(extractor=extractor, repositories=ingestion_repositories)
+    ingestion.ingest(_capture(100, "I parked at A1."))
+    extractor.candidates = (
+        _candidate(
+            kind=MemoryKind.CURRENT_STATE,
+            subject="my car",
+            subject_type=EntityType.VEHICLE,
+            predicate="parked_at",
+            value="B7",
+        ),
+    )
+    latest_capture = _capture(101, "I parked at B7.")
+    ingestion.ingest(latest_capture)
+    extractor.candidates = (
+        _candidate(
+            kind=MemoryKind.CURRENT_STATE,
+            subject="my passport",
+            subject_type=EntityType.OBJECT,
+            predicate="located_at",
+            value="desk drawer",
+        ),
+    )
+    ingestion.ingest(_capture(102, "My passport is in the desk drawer."))
+
+    foreign_subject = Entity(
+        id=_id(10_103),
+        user_id=OTHER_USER_ID,
+        type=EntityType.VEHICLE,
+        canonical_name="my car",
+    )
+    entities.add(user_id=OTHER_USER_ID, entity=foreign_subject)
+    memories.append(
+        user_id=OTHER_USER_ID,
+        memory=Memory(
+            id=_id(10_104),
+            user_id=OTHER_USER_ID,
+            kind=MemoryKind.CURRENT_STATE,
+            subject_entity_id=foreign_subject.id,
+            predicate="parked_at",
+            value="FOREIGN",
+            observed_at=NOW,
+            memory_key=Memory.build_memory_key(foreign_subject.id, "parked_at"),
+        ),
+    )
+
+    recall = _recall_service(entities=entities, queries=query_repository)
+    parking = recall.recall(
+        _recall_request(
+            subject="my car",
+            kind=MemoryKind.CURRENT_STATE,
+            predicate="parked_at",
+            mode=RecallMode.CURRENT,
+        )
+    )
+    passport = recall.recall(
+        _recall_request(
+            subject="my passport",
+            kind=MemoryKind.CURRENT_STATE,
+            predicate="located_at",
+            mode=RecallMode.CURRENT,
+        )
+    )
+
+    assert parking.outcome == RecallOutcome.FOUND
+    assert [memory.value for memory in parking.memories] == ["B7"]
+    assert parking.memories[0].source_capture_id == latest_capture.id
+    assert passport.memories[0].value == "desk drawer"
+    assert captures.get(user_id=USER_ID, capture_id=latest_capture.id) == latest_capture
+    assert all(memory.user_id == USER_ID for memory in parking.memories)
+
+
+def test_recall_facts_and_multiple_preferences_from_postgres(
+    ingestion_repositories: tuple[
+        PostgresCaptureRepository,
+        PostgresEntityRepository,
+        PostgresMemoryRepository,
+    ],
+    query_repository: PostgresMemoryQueryRepository,
+) -> None:
+    _, entities, _ = ingestion_repositories
+    extractor = FakeExtractor(
+        [
+            _candidate(
+                kind=MemoryKind.FACT,
+                subject="Kevin",
+                subject_type=EntityType.PERSON,
+                predicate="birthday",
+                value="March 12",
+            )
+        ]
+    )
+    ingestion = _service(extractor=extractor, repositories=ingestion_repositories)
+    ingestion.ingest(_capture(110, "Kevin's birthday is March 12."))
+    extractor.candidates = tuple(
+        _candidate(
+            kind=MemoryKind.PREFERENCE,
+            subject="Kevin",
+            subject_type=EntityType.PERSON,
+            predicate="likes",
+            value=value,
+        )
+        for value in ("coffee", "jazz")
+    )
+    ingestion.ingest(_capture(111, "Kevin likes coffee and jazz."))
+    recall = _recall_service(entities=entities, queries=query_repository)
+
+    birthday = recall.recall(
+        _recall_request(
+            subject="Kevin",
+            kind=MemoryKind.FACT,
+            predicate="birthday",
+            mode=RecallMode.CURRENT,
+        )
+    )
+    preferences = recall.recall(
+        _recall_request(
+            subject="Kevin",
+            kind=MemoryKind.PREFERENCE,
+            predicate="likes",
+            mode=RecallMode.ACTIVE,
+        )
+    )
+
+    assert [memory.value for memory in birthday.memories] == ["March 12"]
+    assert {memory.value for memory in preferences.memories} == {"coffee", "jazz"}
+
+
+def test_recall_event_history_and_latest_use_effective_event_time(
+    ingestion_repositories: tuple[
+        PostgresCaptureRepository,
+        PostgresEntityRepository,
+        PostgresMemoryRepository,
+    ],
+    query_repository: PostgresMemoryQueryRepository,
+) -> None:
+    _, entities, _ = ingestion_repositories
+    extractor = FakeExtractor(
+        [
+            _candidate(
+                kind=MemoryKind.EVENT,
+                subject="me",
+                subject_type=EntityType.PERSON,
+                predicate="bench_press",
+                value="185x5",
+                occurred_at=NOW - timedelta(days=3),
+            )
+        ]
+    )
+    ingestion = _service(extractor=extractor, repositories=ingestion_repositories)
+    ingestion.ingest(_capture(120, "Bench 185x5 three days ago."))
+    extractor.candidates = (
+        _candidate(
+            kind=MemoryKind.EVENT,
+            subject="me",
+            subject_type=EntityType.PERSON,
+            predicate="bench_press",
+            value="190x5",
+            occurred_at=NOW - timedelta(days=1),
+        ),
+    )
+    ingestion.ingest(_capture(121, "Bench 190x5 yesterday."))
+    extractor.candidates = (
+        _candidate(
+            kind=MemoryKind.EVENT,
+            subject="me",
+            subject_type=EntityType.PERSON,
+            predicate="oil_changed",
+            value={"mileage": 42_000},
+            occurred_at=NOW - timedelta(days=2),
+        ),
+    )
+    ingestion.ingest(_capture(122, "Changed oil at 42,000 miles."))
+    recall = _recall_service(entities=entities, queries=query_repository)
+
+    history = recall.recall(
+        _recall_request(
+            subject="me",
+            kind=MemoryKind.EVENT,
+            predicate="bench_press",
+            mode=RecallMode.HISTORY,
+        )
+    )
+    latest_oil = recall.recall(
+        _recall_request(
+            subject="me",
+            kind=MemoryKind.EVENT,
+            predicate="oil_changed",
+            mode=RecallMode.LATEST,
+        )
+    )
+
+    assert [memory.value for memory in history.memories] == ["190x5", "185x5"]
+    assert latest_oil.memories[0].value == {"mileage": 42_000}
+
+
+def test_recall_active_intents_and_stale_history_from_postgres(
+    ingestion_repositories: tuple[
+        PostgresCaptureRepository,
+        PostgresEntityRepository,
+        PostgresMemoryRepository,
+    ],
+    query_repository: PostgresMemoryQueryRepository,
+) -> None:
+    _, entities, memories = ingestion_repositories
+    extractor = FakeExtractor(
+        [
+            _candidate(
+                kind=MemoryKind.INTENT,
+                subject="me",
+                subject_type=EntityType.PERSON,
+                predicate="buy",
+                value=value,
+            )
+            for value in ("milk", "eggs", "coffee")
+        ]
+    )
+    ingestion = _service(extractor=extractor, repositories=ingestion_repositories)
+    result = ingestion.ingest(_capture(130, "Buy milk, eggs, and coffee."))
+    completed_id = result.candidate_results[1].memory_id
+    cancelled_id = result.candidate_results[2].memory_id
+    assert completed_id is not None and cancelled_id is not None
+    memories.transition_status(
+        user_id=USER_ID,
+        memory_id=completed_id,
+        expected_status=MemoryStatus.ACTIVE,
+        target_status=MemoryStatus.COMPLETED,
+    )
+    memories.transition_status(
+        user_id=USER_ID,
+        memory_id=cancelled_id,
+        expected_status=MemoryStatus.ACTIVE,
+        target_status=MemoryStatus.CANCELLED,
+    )
+    subject = entities.list_for_user(user_id=USER_ID)[0]
+    stale = Memory(
+        id=_id(10_131),
+        user_id=USER_ID,
+        kind=MemoryKind.FACT,
+        subject_entity_id=subject.id,
+        predicate="temporary_note",
+        value="stale",
+        observed_at=NOW - timedelta(days=2),
+        valid_until=NOW - timedelta(days=1),
+    )
+    memories.append(user_id=USER_ID, memory=stale)
+    recall = _recall_service(entities=entities, queries=query_repository)
+
+    active = recall.recall(
+        _recall_request(
+            subject="me",
+            kind=MemoryKind.INTENT,
+            predicate="buy",
+            mode=RecallMode.ACTIVE,
+        )
+    )
+    intent_history = recall.recall(
+        _recall_request(
+            subject="me",
+            kind=MemoryKind.INTENT,
+            predicate="buy",
+            mode=RecallMode.HISTORY,
+        )
+    )
+    stale_current = recall.recall(
+        _recall_request(
+            subject="me",
+            kind=MemoryKind.FACT,
+            predicate="temporary_note",
+            mode=RecallMode.CURRENT,
+        )
+    )
+    stale_active = recall.recall(
+        _recall_request(
+            subject="me",
+            kind=MemoryKind.FACT,
+            predicate="temporary_note",
+            mode=RecallMode.ACTIVE,
+        )
+    )
+    stale_history = recall.recall(
+        _recall_request(
+            subject="me",
+            kind=MemoryKind.FACT,
+            predicate="temporary_note",
+            mode=RecallMode.HISTORY,
+        )
+    )
+
+    assert [memory.value for memory in active.memories] == ["milk"]
+    assert {memory.status for memory in intent_history.memories} == {
+        MemoryStatus.ACTIVE,
+        MemoryStatus.COMPLETED,
+        MemoryStatus.CANCELLED,
+    }
+    assert stale_current.outcome == RecallOutcome.NOT_FOUND
+    assert stale_active.outcome == RecallOutcome.NOT_FOUND
+    assert stale_history.memories == (stale,)

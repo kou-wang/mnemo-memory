@@ -17,6 +17,9 @@ from mnemo.interfaces import (
     EntityResolutionOutcome,
     EntityResolver,
     Extractor,
+    MemoryQuery,
+    MemoryQueryOrder,
+    MemoryQueryRepository,
     MemoryRepository,
     RepositoryInvariantError,
 )
@@ -26,6 +29,14 @@ from mnemo.models.capture import Capture, SourceType
 from mnemo.models.entity import Entity, EntityType
 from mnemo.models.memory import Memory
 from mnemo.models.types import MemoryKind, MemoryStatus
+from mnemo.recall import (
+    RecallInvariantError,
+    RecallMode,
+    RecallOutcome,
+    StructuredRecallRequest,
+    StructuredRecallResult,
+    StructuredRecallService,
+)
 
 __all__ = [
     "CandidateMemory",
@@ -52,8 +63,17 @@ __all__ = [
     "Memory",
     "MemoryKind",
     "MemoryRepository",
+    "MemoryQuery",
+    "MemoryQueryOrder",
+    "MemoryQueryRepository",
     "MemoryStatus",
     "RepositoryInvariantError",
+    "RecallInvariantError",
+    "RecallMode",
+    "RecallOutcome",
     "SourceType",
+    "StructuredRecallRequest",
+    "StructuredRecallResult",
+    "StructuredRecallService",
     "normalize_entity_name",
 ]

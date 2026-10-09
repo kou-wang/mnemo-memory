@@ -107,6 +107,14 @@ class MemoryRow(Base):
         Index("ix_memories_user_observed_at", "user_id", "observed_at"),
         Index("ix_memories_user_status", "user_id", "status"),
         Index(
+            "ix_memories_structured_recall",
+            "user_id",
+            "subject_entity_id",
+            "kind",
+            "status",
+            "predicate",
+        ),
+        Index(
             "uq_memories_active_current_state_slot",
             "user_id",
             "memory_key",

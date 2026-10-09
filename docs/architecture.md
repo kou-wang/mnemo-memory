@@ -179,6 +179,35 @@ supersession locks the existing active row and changes it to `SUPERSEDED` while
 inserting its replacement in that same transaction; any failure rolls back both
 changes. The generic transition method remains non-supersession-only.
 
+### Structured and temporal recall
+
+`StructuredRecallService` is the first deterministic read path. It resolves a
+structured subject mention through the existing conservative `EntityResolver`,
+then reads validated `Memory` evidence through the provider-independent
+`MemoryQueryRepository`. Unmatched, ambiguous, and uniquely matched-but-wrong-
+type subjects remain explicit outcomes. An expected `EntityType` is only a
+post-match consistency check and never chooses among ambiguous identities.
+
+The read contract supports user, status, kind, subject, predicate, object,
+occurrence/observation/effective-event time, validity, stable ordering, and
+bounded-limit filters. The PostgreSQL implementation returns domain models,
+never ORM rows, and is backed by one focused structured-recall index.
+
+Current and active recall returns only `ACTIVE` evidence that is temporally
+valid according to the injected timezone-aware `Clock`. Future `valid_from`,
+past `valid_until`, and reached `expires_at` boundaries exclude a row without
+mutating its persisted status. Explicit history queries may still return stale
+or terminal evidence. Event history is newest-first by `occurred_at`, falling
+back to `observed_at`, with UUID ordering as a deterministic final tie-breaker.
+Current-state duplicate slots fail closed, while conflicting active facts and
+multiple preferences remain separate evidence rather than being guessed away.
+
+Recall creates no entities, performs no lifecycle changes, preserves each
+memory's source-capture provenance, and stops at typed evidence. Natural-
+language query interpretation and answer synthesis are later layers. Semantic
+or vector retrieval remains a fallback or augmentation after structured and
+temporal lookup, not the primary path.
+
 ### Time
 
 `Clock` is an injectable protocol whose `now()` result must be timezone-aware.
@@ -249,6 +278,8 @@ The current interface layer intentionally excludes:
 - fuzzy or semantic entity candidate generation and entity merge operations
 - FastAPI
 - mobile app
+- natural-language recall interpretation or answer synthesis
+- semantic/vector retrieval and ranking
 
 These may be added only through later scoped Issues after the contracts and
 domain behavior are reviewed.

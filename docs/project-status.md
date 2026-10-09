@@ -4,9 +4,9 @@ Last updated: 2026-10-09
 
 ## Current phase
 
-**Ingestion orchestration (Issue #18)**
+**Structured and temporal recall (Issue #20)**
 
-Working branch: `feat/ingestion-orchestration`
+Working branch: `feat/structured-temporal-recall`
 
 Sprint 1 PR: **#6 — merged**
 
@@ -22,7 +22,9 @@ PostgreSQL persistence PR: **#15 — merged**
 
 Typed entity mentions PR: **#17 — merged**
 
-Issue #18 implementation: **complete; awaiting maintainer review**
+Ingestion orchestration PR: **#19 — merged**
+
+Issue #20 implementation: **complete; awaiting maintainer review**
 
 ## Completed
 
@@ -162,11 +164,9 @@ Implemented:
 - preserved recursive `anyOf` schema compatibility with no `oneOf`
 - unchanged deterministic name/alias entity resolution behavior
 
-## In progress
-
 ### Issue #18 — Ingestion orchestration
 
-Implementation complete; awaiting maintainer review.
+Completed and reviewed.
 
 Implemented:
 - provider-independent capture-to-memory write-path orchestration
@@ -178,15 +178,30 @@ Implemented:
 - atomic repository current-state replacement without a global unit of work
 - equivalent-retry deduplication and real PostgreSQL end-to-end coverage
 
+## In progress
+
+### Issue #20 — Structured and temporal recall
+
+Implementation complete; awaiting maintainer review.
+
+Implemented:
+- provider-independent structured recall requests, results, and memory queries
+- explicit matched, missing, ambiguous, and subject-type-conflict outcomes
+- deterministic current-state, fact, preference, event, and intent recall
+- clock-based temporal validity without status mutation
+- PostgreSQL structured/temporal queries with stable ordering and limits
+- source-capture provenance preservation and fail-closed scope validation
+- real PostgreSQL recall coverage for the initial product scenarios
+
 ## Next
 
-1. Review Issue #18 and its dedicated PR
-2. Later retrieval and evaluation work
+1. Review Issue #20 and its dedicated PR
+2. Later semantic retrieval, synthesis, and evaluation work
 3. Consumer/mobile application work
 
 ## Current constraints
 
-Issue #18 adds only internal ingestion orchestration and must not add:
+Issue #20 adds only deterministic structured/temporal recall and must not add:
 - FastAPI
 - pgvector
 - Redis
@@ -195,10 +210,10 @@ Issue #18 adds only internal ingestion orchestration and must not add:
 - billing
 - notifications
 - lifecycle semantic changes
-- retrieval, embeddings, or semantic indexing
-- entity merging or type-based identity disambiguation
-- lifecycle-command interpretation
-- a global unit of work or destructive cross-repository rollback
+- natural-language query interpretation or LLM answer synthesis
+- embeddings, pgvector, or semantic/hybrid ranking
+- entity creation, merging, or type-based identity disambiguation
+- automatic expiration mutation
 
 ## Product direction
 
