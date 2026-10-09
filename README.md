@@ -31,6 +31,7 @@ LLM extraction or storage adapters. The shared project context is organized as:
 - [Roadmap](docs/roadmap.md)
 - [Project status](docs/project-status.md)
 - [Development workflow](docs/development-workflow.md)
+- [Evaluation](docs/evaluation.md)
 - [Sprint 1 specification](docs/sprint-1-spec.md)
 
 ## Development
@@ -92,6 +93,7 @@ migrations itself:
 ```bash
 export MNEMO_TEST_DATABASE_URL="postgresql+psycopg://USER:PASSWORD@HOST/TEST_DATABASE"
 pytest -m postgres
+python scripts/run_deterministic_evaluation.py
 ```
 
 Never point the integration suite at a database containing data that must be

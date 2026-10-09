@@ -62,7 +62,11 @@ ruff check .
 mypy src
 pytest --cov=mnemo --cov-report=term-missing
 coverage report --include="*/mnemo/lifecycle/*" --fail-under=90
+python scripts/run_deterministic_evaluation.py
 ```
+
+The deterministic evaluation command also requires the disposable PostgreSQL
+test database described in [Evaluation](evaluation.md).
 
 CI runs stable checks named `Quality gates (Python 3.11)` and
 `Quality gates (Python 3.12)`. Repository administrators may make those checks
