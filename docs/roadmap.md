@@ -53,9 +53,12 @@ not add lifecycle-command interpretation or a cross-repository unit of work.
 Issue #20 adds the first deterministic structured and temporal recall layer:
 explicit subject resolution outcomes, current/active/history/latest modes,
 temporal validity, stable PostgreSQL queries, and provenance-preserving evidence.
-Natural-language interpretation, aggregation, grounded synthesis, and
-semantic/hybrid retrieval remain later work. Semantic/vector lookup is a
-fallback or augmentation after structured retrieval, not the primary path.
+Issue #22 adds probabilistic natural-language planning into one or more existing
+structured recall requests, with explicit unsupported/ambiguous abstention and
+relative time anchored only to the supplied question timestamp. Aggregation,
+grounded synthesis, and semantic/hybrid retrieval remain later work.
+Semantic/vector lookup is a fallback or augmentation after structured retrieval,
+not the primary path.
 
 ## 9. Evaluation
 

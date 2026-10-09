@@ -3,6 +3,8 @@
 from mnemo.recall.models import (
     RecallMode,
     RecallOutcome,
+    RecallPlan,
+    RecallPlanOutcome,
     StructuredRecallRequest,
     StructuredRecallResult,
 )
@@ -12,6 +14,8 @@ __all__ = [
     "RecallInvariantError",
     "RecallMode",
     "RecallOutcome",
+    "RecallPlan",
+    "RecallPlanOutcome",
     "StructuredRecallRequest",
     "StructuredRecallResult",
     "StructuredRecallService",

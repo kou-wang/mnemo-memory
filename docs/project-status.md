@@ -4,9 +4,9 @@ Last updated: 2026-10-09
 
 ## Current phase
 
-**Structured and temporal recall (Issue #20)**
+**Natural-language recall planning (Issue #22)**
 
-Working branch: `feat/structured-temporal-recall`
+Working branch: `feat/natural-language-recall-planner`
 
 Sprint 1 PR: **#6 — merged**
 
@@ -24,7 +24,9 @@ Typed entity mentions PR: **#17 — merged**
 
 Ingestion orchestration PR: **#19 — merged**
 
-Issue #20 implementation: **complete; awaiting maintainer review**
+Structured and temporal recall PR: **#21 — merged**
+
+Issue #22 implementation: **complete; awaiting maintainer review**
 
 ## Completed
 
@@ -178,11 +180,9 @@ Implemented:
 - atomic repository current-state replacement without a global unit of work
 - equivalent-retry deduplication and real PostgreSQL end-to-end coverage
 
-## In progress
-
 ### Issue #20 — Structured and temporal recall
 
-Implementation complete; awaiting maintainer review.
+Completed and reviewed.
 
 Implemented:
 - provider-independent structured recall requests, results, and memory queries
@@ -193,15 +193,30 @@ Implemented:
 - source-capture provenance preservation and fail-closed scope validation
 - real PostgreSQL recall coverage for the initial product scenarios
 
+## In progress
+
+### Issue #22 — Natural-language recall planning
+
+Implementation complete; awaiting maintainer review.
+
+Implemented:
+- provider-independent `RecallPlanner` and typed plan outcomes
+- OpenAI Responses API Structured Outputs planning adapter
+- canonical MVP question-to-structured-request interpretation guidance
+- explicit unsupported and ambiguous abstention without speculative requests
+- fixed-offset relative calendar time anchored only to supplied `asked_at`
+- strict no-`oneOf` schema regression coverage and sanitized provider failures
+- deterministic offline recall-planning evaluation seed
+
 ## Next
 
-1. Review Issue #20 and its dedicated PR
-2. Later semantic retrieval, synthesis, and evaluation work
+1. Review Issue #22 and its dedicated PR
+2. Later semantic retrieval, answer synthesis, and evaluation work
 3. Consumer/mobile application work
 
 ## Current constraints
 
-Issue #20 adds only deterministic structured/temporal recall and must not add:
+Issue #22 adds only probabilistic natural-language recall planning and must not add:
 - FastAPI
 - pgvector
 - Redis
@@ -210,10 +225,11 @@ Issue #20 adds only deterministic structured/temporal recall and must not add:
 - billing
 - notifications
 - lifecycle semantic changes
-- natural-language query interpretation or LLM answer synthesis
+- recall execution orchestration or LLM answer synthesis
 - embeddings, pgvector, or semantic/hybrid ranking
 - entity creation, merging, or type-based identity disambiguation
 - automatic expiration mutation
+- repository access, identity resolution, persistence, or lifecycle mutation
 
 ## Product direction
 
