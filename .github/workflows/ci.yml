@@ -62,5 +62,8 @@ jobs:
       - name: PostgreSQL integration tests
         run: pytest -m postgres --cov=mnemo --cov-append --cov-report=term-missing
 
+      - name: Deterministic contract evaluation
+        run: python scripts/run_deterministic_evaluation.py
+
       - name: Enforce lifecycle coverage
         run: coverage report --include="*/mnemo/lifecycle/*" --fail-under=90

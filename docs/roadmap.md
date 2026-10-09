@@ -67,9 +67,12 @@ not the primary path.
 
 ## 9. Evaluation
 
-Turn canonical scenarios into repeatable extraction, lifecycle, retrieval,
-temporal-query, and end-to-end evaluation datasets and gates. Metrics and
-thresholds beyond established lifecycle coverage are `TBD`.
+Issue #28 establishes typed, serializable evaluation contracts and a 100%
+deterministic CI gate for lifecycle, entity resolution, planning fixtures,
+PostgreSQL structured/temporal recall, and grounded-answer invariants. Real
+provider/model quality remains a separate non-CI activity; its datasets,
+execution policy, and thresholds are `TBD` and mocked outputs are not accuracy
+evidence. See [Evaluation](evaluation.md).
 
 ## 10. Consumer and mobile application work
 

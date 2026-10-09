@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 import inspect
-import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import cast
 
 import pytest
@@ -24,6 +22,7 @@ from mnemo import (
     RecallPlanOutcome,
     StructuredRecallRequest,
 )
+from mnemo.evaluation.planning import recall_planning_cases
 from mnemo.providers.openai import (
     OpenAIRecallPlanner,
     OpenAIRecallProviderError,
@@ -411,10 +410,9 @@ def test_prompt_documents_abstention_authority_and_canonical_time_rules() -> Non
 
 
 def test_recall_planning_evaluation_seed_covers_canonical_questions() -> None:
-    path = Path(__file__).parent / "data" / "recall_planning_evaluation.json"
-    cases = json.loads(path.read_text(encoding="utf-8"))
+    cases = recall_planning_cases()
 
-    assert {case["name"] for case in cases} == {
+    assert {case.case_id for case in cases} == {
         "parking_current",
         "passport_current",
         "birthday_fact",
@@ -428,9 +426,9 @@ def test_recall_planning_evaluation_seed_covers_canonical_questions() -> None:
         "unsupported_semantic",
         "ambiguous_target",
     }
-    assert all(datetime.fromisoformat(case["asked_at"]).tzinfo for case in cases)
-    assert all(case["question"] and case["expected_outcome"] for case in cases)
+    assert all(case.asked_at.tzinfo for case in cases)
+    assert all(case.question and case.expected_plan.outcome for case in cases)
     assert all(
-        case["expected_requests"] if case["expected_outcome"] == "PLANNED" else True
+        case.expected_plan.requests if case.expected_plan.outcome == "PLANNED" else True
         for case in cases
     )

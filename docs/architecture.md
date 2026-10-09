@@ -300,6 +300,21 @@ evidence models. Semantic/vector fallback remains later work.
 It enables deterministic future temporal orchestration without adding a
 scheduler or forcing existing models to depend on a clock.
 
+### Evaluation
+
+`mnemo.evaluation` defines provider-independent typed cases, results, summaries,
+and classification metrics. Deterministic evaluators exercise lifecycle, entity
+resolution, the recall-planning fixture contract, structured/temporal recall,
+and grounded-answer invariants. Retrieval evaluation uses the real PostgreSQL
+adapter; answer evaluation uses a fake synthesizer so the evidence and citation
+contracts remain reproducible and network-free.
+
+The deterministic report is serializable and requires every canonical contract
+case to pass. It explicitly records that provider quality was not evaluated.
+Live model accuracy is a separate, non-CI activity: mocked provider responses
+must never be presented as extraction, planning, or answer-quality evidence.
+See [Evaluation](evaluation.md) for the dataset and command boundaries.
+
 ## Domain invariants
 
 1. `memory_key` is a `CURRENT_STATE`-only concept: it is required (and

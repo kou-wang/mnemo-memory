@@ -4,9 +4,9 @@ Last updated: 2026-10-09
 
 ## Current phase
 
-**Grounded answer synthesis (Issue #26)**
+**Deterministic evaluation harness (Issue #28)**
 
-Working branch: `feat/grounded-answer-synthesis`
+Working branch: `feat/evaluation-harness`
 
 Sprint 1 PR: **#6 — merged**
 
@@ -30,7 +30,9 @@ Natural-language recall planner PR: **#23 — merged**
 
 Recall execution orchestration PR: **#25 — merged**
 
-Issue #26 implementation: **complete; awaiting maintainer review**
+Grounded answer synthesis PR: **#27 — merged**
+
+Issue #28 implementation: **complete; awaiting maintainer review**
 
 ## Completed
 
@@ -224,31 +226,45 @@ Implemented:
 - propagated planner/provider and structured-recall invariant failures
 - real PostgreSQL end-to-end coverage using a fake planner
 
-## In progress
-
 ### Issue #26 — Grounded answer synthesis
 
-Implementation complete; awaiting maintainer review.
+Completed and reviewed.
 
 Implemented:
 - provider-independent `AnswerSynthesizer` and `RecallAnswerService`
 - deterministic no-evidence and abstention handling without synthesis calls
 - exact grounded evidence handoff for found and partial recall
 - validated memory-id citations with fail-closed foreign/unknown citation checks
-- preserved multi-memory facts, multiple preferences, ordering, and provenance
+- preserved multi-memory facts without deterministic cardinality assumptions
 - OpenAI Responses API strict Structured Outputs adapter with sanitized failures
 - minimal provider evidence payloads that exclude user ids and internal objects
 - offline provider/schema coverage and real PostgreSQL end-to-end answer coverage
 
+## In progress
+
+### Issue #28 — Deterministic evaluation harness
+
+Implementation complete; awaiting maintainer review.
+
+Implemented:
+- provider-independent typed evaluation cases, results, summaries, and metrics
+- deterministic lifecycle and conservative entity-resolution contract datasets
+- the canonical recall-planning seed promoted into the packaged harness
+- real PostgreSQL structured/temporal recall evaluation with provenance checks
+- grounded-answer invariant evaluation using a fake synthesizer
+- serializable reports and a failing 100% deterministic CI gate
+- explicit separation between deterministic contracts and live-provider quality
+- evaluation architecture, execution, and dataset documentation
+
 ## Next
 
-1. Review Issue #26 and its dedicated PR
-2. Later semantic retrieval and evaluation work
+1. Review Issue #28 and its dedicated PR
+2. Define future live-provider quality evaluation only through dedicated scope
 3. Consumer/mobile application work
 
 ## Current constraints
 
-Issue #26 adds only grounded answer synthesis over deterministic recall and must not add:
+Issue #28 adds only deterministic evaluation tooling for existing contracts and must not add:
 - FastAPI
 - pgvector
 - Redis
@@ -257,13 +273,9 @@ Issue #26 adds only grounded answer synthesis over deterministic recall and must
 - billing
 - notifications
 - lifecycle semantic changes
-- an aggregation engine or answer-time repository access
-- category-aware broad event recall
-- web search
-- embeddings, pgvector, or semantic/hybrid ranking
-- entity creation, merging, or type-based identity disambiguation
-- automatic expiration mutation
-- repository access, identity resolution, persistence, or lifecycle mutation
+- live OpenAI calls in CI
+- dashboards or hosted evaluation services
+- retrieval, lifecycle, entity-resolution, or answer semantic changes
 
 ## Product direction
 
