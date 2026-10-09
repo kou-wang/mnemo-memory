@@ -55,8 +55,11 @@ explicit subject resolution outcomes, current/active/history/latest modes,
 temporal validity, stable PostgreSQL queries, and provenance-preserving evidence.
 Issue #22 adds probabilistic natural-language planning into one or more existing
 structured recall requests, with explicit unsupported/ambiguous abstention and
-relative time anchored only to the supplied question timestamp. Aggregation,
-grounded synthesis, and semantic/hybrid retrieval remain later work.
+relative time anchored only to the supplied question timestamp. Issue #24 adds
+provider-independent execution of those exact requests through deterministic
+structured recall, retaining per-request results and grounded provenance while
+preserving planner abstention. Answer synthesis, category-aware aggregation, and
+semantic/hybrid retrieval remain later work.
 Semantic/vector lookup is a fallback or augmentation after structured retrieval,
 not the primary path.
 

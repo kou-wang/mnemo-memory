@@ -4,9 +4,9 @@ Last updated: 2026-10-09
 
 ## Current phase
 
-**Natural-language recall planning (Issue #22)**
+**Recall execution orchestration (Issue #24)**
 
-Working branch: `feat/natural-language-recall-planner`
+Working branch: `feat/recall-orchestration`
 
 Sprint 1 PR: **#6 — merged**
 
@@ -26,7 +26,9 @@ Ingestion orchestration PR: **#19 — merged**
 
 Structured and temporal recall PR: **#21 — merged**
 
-Issue #22 implementation: **complete; awaiting maintainer review**
+Natural-language recall planner PR: **#23 — merged**
+
+Issue #24 implementation: **complete; awaiting maintainer review**
 
 ## Completed
 
@@ -193,11 +195,9 @@ Implemented:
 - source-capture provenance preservation and fail-closed scope validation
 - real PostgreSQL recall coverage for the initial product scenarios
 
-## In progress
-
 ### Issue #22 — Natural-language recall planning
 
-Implementation complete; awaiting maintainer review.
+Completed and reviewed.
 
 Implemented:
 - provider-independent `RecallPlanner` and typed plan outcomes
@@ -208,15 +208,31 @@ Implemented:
 - strict no-`oneOf` schema regression coverage and sanitized provider failures
 - deterministic offline recall-planning evaluation seed
 
+## In progress
+
+### Issue #24 — Recall execution orchestration
+
+Implementation complete; awaiting maintainer review.
+
+Implemented:
+- provider-independent planner-to-structured-recall execution
+- zero retrieval for unsupported and ambiguous plans
+- exact in-order execution of planned requests without broadening or repair
+- fail-closed preflight validation of every planned user scope
+- preserved per-request results and deterministic multi-request outcomes
+- stable grounded evidence ordering with unchanged source-capture provenance
+- propagated planner/provider and structured-recall invariant failures
+- real PostgreSQL end-to-end coverage using a fake planner
+
 ## Next
 
-1. Review Issue #22 and its dedicated PR
+1. Review Issue #24 and its dedicated PR
 2. Later semantic retrieval, answer synthesis, and evaluation work
 3. Consumer/mobile application work
 
 ## Current constraints
 
-Issue #22 adds only probabilistic natural-language recall planning and must not add:
+Issue #24 adds only provider-independent recall execution orchestration and must not add:
 - FastAPI
 - pgvector
 - Redis
@@ -225,7 +241,8 @@ Issue #22 adds only probabilistic natural-language recall planning and must not 
 - billing
 - notifications
 - lifecycle semantic changes
-- recall execution orchestration or LLM answer synthesis
+- LLM answer synthesis or an aggregation engine
+- category-aware broad event recall
 - embeddings, pgvector, or semantic/hybrid ranking
 - entity creation, merging, or type-based identity disambiguation
 - automatic expiration mutation

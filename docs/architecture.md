@@ -240,6 +240,23 @@ lifecycle, truth-evaluation, or answer-synthesis authority. Structured recall
 execution remains deterministic. Semantic fallback and natural-language answer
 synthesis remain later work.
 
+### Recall execution orchestration
+
+`RecallOrchestrationService` is the provider-independent bridge from a natural-
+language plan to deterministic structured recall. It preserves planner
+`UNSUPPORTED` and `AMBIGUOUS` outcomes without executing retrieval. For a
+`PLANNED` result, it validates every request's user scope before the first read,
+then executes the requests exactly once and in plan order without broadening,
+repairing, or otherwise reinterpreting them.
+
+The result retains each request beside its complete `StructuredRecallResult` and
+also exposes evidence flattened in stable request/result order. Aggregate
+outcomes distinguish all-found, all-missing, mixed partial, ambiguous-subject,
+and subject-type-conflict cases; they do not merge memories or synthesize a
+natural-language answer. Planner/provider failures and structured-recall
+invariant failures propagate to the caller. Memory provenance remains unchanged
+through this read-only layer.
+
 ### Time
 
 `Clock` is an injectable protocol whose `now()` result must be timezone-aware.

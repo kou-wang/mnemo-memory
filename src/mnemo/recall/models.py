@@ -90,6 +90,18 @@ class RecallPlan(BaseModel):
         return self
 
 
+class RecallExecutionOutcome(StrEnum):
+    """Aggregate outcome of planning plus deterministic recall execution."""
+
+    FOUND = "FOUND"
+    NOT_FOUND = "NOT_FOUND"
+    UNSUPPORTED = "UNSUPPORTED"
+    AMBIGUOUS_PLAN = "AMBIGUOUS_PLAN"
+    AMBIGUOUS_SUBJECT = "AMBIGUOUS_SUBJECT"
+    SUBJECT_TYPE_CONFLICT = "SUBJECT_TYPE_CONFLICT"
+    PARTIAL = "PARTIAL"
+
+
 class StructuredRecallResult(BaseModel):
     """Deterministic recall evidence and resolution metadata."""
 
@@ -116,3 +128,27 @@ class StructuredRecallResult(BaseModel):
         elif self.memories or self.ambiguous_subject_ids:
             raise ValueError("non-found results cannot contain evidence or ambiguity candidates")
         return self
+
+
+class RecallRequestExecution(BaseModel):
+    """One planned request and its unmodified deterministic recall result."""
+
+    request: StructuredRecallRequest
+    result: StructuredRecallResult
+
+
+class RecallExecutionResult(BaseModel):
+    """Complete grounded output of one natural-language recall execution."""
+
+    outcome: RecallExecutionOutcome
+    planner_outcome: RecallPlanOutcome
+    executions: tuple[RecallRequestExecution, ...] = ()
+
+    @property
+    def memories(self) -> tuple[Memory, ...]:
+        """Flatten evidence in request order, preserving each result's order."""
+        return tuple(
+            memory
+            for execution in self.executions
+            for memory in execution.result.memories
+        )
