@@ -244,6 +244,51 @@ def test_unmatched_subject_returns_not_found_without_query() -> None:
     assert repository.queries == []
 
 
+def test_foreign_scope_matched_resolution_fails_closed_without_query() -> None:
+    foreign = Entity(
+        id=_id(91),
+        user_id="foreign-user",
+        type=EntityType.VEHICLE,
+        canonical_name="my car",
+    )
+    resolution = EntityResolution(
+        user_id=foreign.user_id,
+        mention="my car",
+        outcome=EntityResolutionOutcome.MATCHED,
+        matched_entity=foreign,
+    )
+    service, _, repository = _service(resolution=resolution)
+
+    with pytest.raises(RecallInvariantError, match="another user's scope"):
+        service.recall(_request())
+
+    assert repository.queries == []
+
+
+def test_foreign_scope_ambiguous_resolution_fails_closed_without_leaking_ids() -> None:
+    candidates = tuple(
+        Entity(
+            id=_id(number),
+            user_id="foreign-user",
+            type=EntityType.PERSON,
+            canonical_name="Alex",
+        )
+        for number in (92, 93)
+    )
+    resolution = EntityResolution(
+        user_id="foreign-user",
+        mention="Alex",
+        outcome=EntityResolutionOutcome.AMBIGUOUS,
+        candidates=candidates,
+    )
+    service, _, repository = _service(resolution=resolution)
+
+    with pytest.raises(RecallInvariantError, match="another user's scope"):
+        service.recall(_request(subject="Alex"))
+
+    assert repository.queries == []
+
+
 def test_ambiguous_subject_is_not_disambiguated_by_expected_type() -> None:
     candidates = (
         _entity(2, name="Alex", entity_type=EntityType.PERSON),

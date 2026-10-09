@@ -43,6 +43,8 @@ class StructuredRecallService:
             user_id=request.user_id,
             mention=request.subject,
         )
+        if resolution.user_id != request.user_id:
+            raise RecallInvariantError("entity resolver returned another user's scope")
         if resolution.outcome == EntityResolutionOutcome.UNMATCHED:
             return self._result(request=request, outcome=RecallOutcome.NOT_FOUND)
         if resolution.outcome == EntityResolutionOutcome.AMBIGUOUS:
