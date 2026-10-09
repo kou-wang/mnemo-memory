@@ -29,7 +29,10 @@ boundary. Provider and model choices are `TBD`.
 ## 5. Entity resolution
 
 Add conservative, explainable, reversible entity resolution without silent
-ambiguous merges. Detailed algorithms are `TBD`.
+ambiguous merges. Issue #16 adds explicit probabilistic entity-type hints to
+unresolved extraction mentions as the bridge to future ingestion orchestration;
+it does not change deterministic name/alias matching or create entities.
+Detailed future algorithms and orchestration remain `TBD`.
 
 ## 6. Persistence
 

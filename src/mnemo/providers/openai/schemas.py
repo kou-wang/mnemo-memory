@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validat
 
 from mnemo.models._shared import require_non_blank, require_timezone_aware
 from mnemo.models.candidate import CandidateMemory
+from mnemo.models.entity import EntityType
 from mnemo.models.types import MemoryKind
 
 
@@ -80,8 +81,10 @@ class OpenAIExtractedCandidate(_OpenAISchema):
     kind: MemoryKind
     category: str | None
     subject: str = Field(min_length=1)
+    subject_type: EntityType
     predicate: str = Field(pattern=r"^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$")
     object: str | None
+    object_type: EntityType | None
     value: OpenAIValue
     occurred_at: datetime | None
     valid_from: datetime | None
@@ -109,14 +112,24 @@ class OpenAIExtractedCandidate(_OpenAISchema):
             return None
         return require_timezone_aware(value, field_name=info.field_name or "datetime field")
 
+    @model_validator(mode="after")
+    def _validate_object_type(self) -> OpenAIExtractedCandidate:
+        if self.object is None and self.object_type is not None:
+            raise ValueError("object_type must be None when object is None")
+        if self.object is not None and self.object_type is None:
+            raise ValueError("object_type is required when object is present")
+        return self
+
     def to_candidate(self) -> CandidateMemory:
         """Map the provider DTO into the provider-independent domain model."""
         return CandidateMemory(
             kind=self.kind,
             category=self.category,
             subject=self.subject,
+            subject_type=self.subject_type,
             predicate=self.predicate,
             object=self.object,
+            object_type=self.object_type,
             value=_to_json_value(self.value),
             occurred_at=self.occurred_at,
             valid_from=self.valid_from,

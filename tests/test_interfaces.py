@@ -32,12 +32,14 @@ class FakeExtractor:
             CandidateMemory(
                 kind=MemoryKind.INTENT,
                 subject="user",
+                subject_type=EntityType.PERSON,
                 predicate="buy",
                 value="eggs",
             ),
             CandidateMemory(
                 kind=MemoryKind.INTENT,
                 subject="user",
+                subject_type=EntityType.PERSON,
                 predicate="buy",
                 value="milk",
             ),

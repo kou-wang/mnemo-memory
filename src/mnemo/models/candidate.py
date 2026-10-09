@@ -16,25 +16,30 @@ from typing import Any
 from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
 
 from mnemo.models._shared import require_non_blank, require_timezone_aware
+from mnemo.models.entity import EntityType
 from mnemo.models.types import MemoryKind
 
 
 class CandidateMemory(BaseModel):
     """A candidate memory extracted from a single capture.
 
-    One capture may yield zero, one, or many candidates. ``subject`` and
-    ``predicate`` are free-text at this stage (entity resolution happens
-    later); they must still be non-blank. Temporal fields are optional but,
-    when present, must be internally consistent (see
+    One capture may yield zero, one, or many candidates. ``subject`` and the
+    optional ``object`` remain unresolved text mentions, while their entity
+    types are probabilistic extraction hints for future entity creation.
+    Identity resolution happens later and must not treat a type hint as an
+    identity. ``subject`` and ``predicate`` must be non-blank. Temporal fields
+    are optional but, when present, must be internally consistent (see
     :meth:`validate_temporal_bounds`).
     """
 
     kind: MemoryKind
     category: str | None = None
     subject: str = Field(min_length=1)
+    subject_type: EntityType
     predicate: str = Field(min_length=1)
     value: Any
     object: str | None = None
+    object_type: EntityType | None = None
 
     occurred_at: datetime | None = None
     valid_from: datetime | None = None
@@ -62,6 +67,15 @@ class CandidateMemory(BaseModel):
         if value is None:
             return None
         return require_timezone_aware(value, field_name=info.field_name or "datetime field")
+
+    @model_validator(mode="after")
+    def validate_object_type(self) -> CandidateMemory:
+        """Require an entity type exactly when an object mention is present."""
+        if self.object is None and self.object_type is not None:
+            raise ValueError("object_type must be None when object is None")
+        if self.object is not None and self.object_type is None:
+            raise ValueError("object_type is required when object is present")
+        return self
 
     @model_validator(mode="after")
     def validate_temporal_bounds(self) -> CandidateMemory:

@@ -4,9 +4,9 @@ Last updated: 2026-10-08
 
 ## Current phase
 
-**Persistence — PostgreSQL adapters (Issue #14)**
+**Extraction — Typed entity mentions (Issue #16)**
 
-Working branch: `feat/postgres-persistence`
+Working branch: `feat/typed-entity-mentions`
 
 Sprint 1 PR: **#6 — merged**
 
@@ -18,7 +18,9 @@ OpenAI extractor PR: **#11 — merged**
 
 Deterministic entity resolution PR: **#13 — merged**
 
-Issue #14 implementation: **complete; awaiting maintainer review**
+PostgreSQL persistence PR: **#15 — merged**
+
+Issue #16 implementation: **complete; awaiting maintainer review**
 
 ## Completed
 
@@ -133,11 +135,9 @@ Implemented:
 - fail-closed repository scope validation
 - read-only resolution with no entity creation, alias learning, or merge behavior
 
-## In progress
-
 ### Issue #14 — PostgreSQL persistence
 
-Implementation complete; awaiting maintainer review.
+Completed and reviewed.
 
 Implemented:
 - SQLAlchemy 2.x + psycopg 3 adapters for capture, entity, and memory repositories
@@ -148,16 +148,29 @@ Implemented:
 - transactional, row-locked current-state supersession with rollback guarantees
 - real PostgreSQL integration coverage in the Python 3.11/3.12 CI matrix
 
+## In progress
+
+### Issue #16 — Typed entity mentions
+
+Implementation complete; awaiting maintainer review.
+
+Implemented:
+- required `subject_type` and object/object-type consistency on `CandidateMemory`
+- provider-local typed subject/object fields in OpenAI Structured Outputs
+- prompt guidance for independent type classification and first-person subjects
+- typed canonical extraction tests and evaluation seed
+- preserved recursive `anyOf` schema compatibility with no `oneOf`
+- unchanged deterministic name/alias entity resolution behavior
+
 ## Next
 
-1. Review Issue #14 and its dedicated PR
-2. Later retrieval and evaluation work
+1. Review Issue #16 and its dedicated PR
+2. Later ingestion orchestration, retrieval, and evaluation work
 3. Consumer/mobile application work
 
 ## Current constraints
 
-Issue #14 adds only PostgreSQL persistence behind the existing repository
-contracts and must not add:
+Issue #16 adds only typed unresolved entity mentions to extraction and must not add:
 - FastAPI
 - pgvector
 - Redis
@@ -167,7 +180,8 @@ contracts and must not add:
 - notifications
 - lifecycle semantic changes
 - retrieval, embeddings, or semantic indexing
-- capture-to-persistence orchestration
+- capture-to-memory orchestration
+- automatic entity creation, merging, or type-based identity disambiguation
 
 ## Product direction
 
