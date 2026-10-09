@@ -1,0 +1,86 @@
+[
+  {
+    "name": "parking_current",
+    "question": "Where did I park?",
+    "asked_at": "2026-10-09T15:30:00+00:00",
+    "expected_outcome": "PLANNED",
+    "expected_requests": [{"subject": "my car", "expected_subject_type": "vehicle", "kind": "CURRENT_STATE", "predicate": "parked_at", "mode": "CURRENT"}]
+  },
+  {
+    "name": "passport_current",
+    "question": "Where is my passport?",
+    "asked_at": "2026-10-09T15:30:00+00:00",
+    "expected_outcome": "PLANNED",
+    "expected_requests": [{"subject": "my passport", "expected_subject_type": "object", "kind": "CURRENT_STATE", "predicate": "located_at", "mode": "CURRENT"}]
+  },
+  {
+    "name": "birthday_fact",
+    "question": "When is Kevin's birthday?",
+    "asked_at": "2026-10-09T15:30:00+00:00",
+    "expected_outcome": "PLANNED",
+    "expected_requests": [{"subject": "Kevin", "expected_subject_type": "person", "kind": "FACT", "predicate": "birthday", "mode": "CURRENT"}]
+  },
+  {
+    "name": "friend_preferences",
+    "question": "What does Kevin like?",
+    "asked_at": "2026-10-09T15:30:00+00:00",
+    "expected_outcome": "PLANNED",
+    "expected_requests": [{"subject": "Kevin", "expected_subject_type": "person", "kind": "PREFERENCE", "predicate": "likes", "mode": "ACTIVE"}]
+  },
+  {
+    "name": "bench_history",
+    "question": "Show my recent bench press history.",
+    "asked_at": "2026-10-09T15:30:00+00:00",
+    "expected_outcome": "PLANNED",
+    "expected_requests": [{"subject": "me", "expected_subject_type": "person", "kind": "EVENT", "predicate": "bench_press", "mode": "HISTORY"}]
+  },
+  {
+    "name": "latest_oil_change",
+    "question": "When did I last change the oil?",
+    "asked_at": "2026-10-09T15:30:00+00:00",
+    "expected_outcome": "PLANNED",
+    "expected_requests": [{"subject": "my vehicle", "expected_subject_type": "vehicle", "kind": "EVENT", "predicate": "oil_changed", "mode": "LATEST"}]
+  },
+  {
+    "name": "active_shopping",
+    "question": "What am I still planning to buy?",
+    "asked_at": "2026-10-09T15:30:00+00:00",
+    "expected_outcome": "PLANNED",
+    "expected_requests": [{"subject": "me", "expected_subject_type": "person", "kind": "INTENT", "predicate": "buy", "mode": "ACTIVE"}]
+  },
+  {
+    "name": "workouts_this_week",
+    "question": "What workouts did I log this week?",
+    "asked_at": "2026-10-09T15:30:00+00:00",
+    "expected_outcome": "PLANNED",
+    "expected_requests": [{"subject": "me", "expected_subject_type": "person", "kind": "EVENT", "predicate": null, "mode": "HISTORY", "since": "2026-10-05T00:00:00+00:00", "until": "2026-10-09T15:30:00+00:00"}]
+  },
+  {
+    "name": "bench_yesterday",
+    "question": "What did I bench yesterday?",
+    "asked_at": "2026-10-09T15:30:00+00:00",
+    "expected_outcome": "PLANNED",
+    "expected_requests": [{"subject": "me", "expected_subject_type": "person", "kind": "EVENT", "predicate": "bench_press", "mode": "HISTORY", "since": "2026-10-08T00:00:00+00:00", "until": "2026-10-08T23:59:59.999999+00:00"}]
+  },
+  {
+    "name": "maintenance_last_month",
+    "question": "What maintenance did I record last month?",
+    "asked_at": "2026-10-09T15:30:00+00:00",
+    "expected_outcome": "PLANNED",
+    "expected_requests": [{"subject": "my vehicle", "expected_subject_type": "vehicle", "kind": "EVENT", "predicate": null, "mode": "HISTORY", "since": "2026-09-01T00:00:00+00:00", "until": "2026-09-30T23:59:59.999999+00:00"}]
+  },
+  {
+    "name": "unsupported_semantic",
+    "question": "Find memories similar to my happiest notes.",
+    "asked_at": "2026-10-09T15:30:00+00:00",
+    "expected_outcome": "UNSUPPORTED",
+    "expected_requests": []
+  },
+  {
+    "name": "ambiguous_target",
+    "question": "Where is it?",
+    "asked_at": "2026-10-09T15:30:00+00:00",
+    "expected_outcome": "AMBIGUOUS",
+    "expected_requests": []
+  }
+]

@@ -21,6 +21,7 @@ from mnemo.interfaces import (
     MemoryQueryOrder,
     MemoryQueryRepository,
     MemoryRepository,
+    RecallPlanner,
     RepositoryInvariantError,
 )
 from mnemo.lifecycle.engine import LifecycleAction, LifecycleDecision, LifecycleEngine
@@ -33,6 +34,8 @@ from mnemo.recall import (
     RecallInvariantError,
     RecallMode,
     RecallOutcome,
+    RecallPlan,
+    RecallPlanOutcome,
     StructuredRecallRequest,
     StructuredRecallResult,
     StructuredRecallService,
@@ -71,6 +74,9 @@ __all__ = [
     "RecallInvariantError",
     "RecallMode",
     "RecallOutcome",
+    "RecallPlan",
+    "RecallPlanner",
+    "RecallPlanOutcome",
     "SourceType",
     "StructuredRecallRequest",
     "StructuredRecallResult",

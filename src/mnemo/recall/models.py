@@ -28,6 +28,14 @@ class RecallOutcome(StrEnum):
     SUBJECT_TYPE_CONFLICT = "SUBJECT_TYPE_CONFLICT"
 
 
+class RecallPlanOutcome(StrEnum):
+    """Whether natural-language recall intent was safely structured."""
+
+    PLANNED = "PLANNED"
+    UNSUPPORTED = "UNSUPPORTED"
+    AMBIGUOUS = "AMBIGUOUS"
+
+
 class StructuredRecallRequest(BaseModel):
     """A structured request; natural-language interpretation is out of scope."""
 
@@ -64,6 +72,21 @@ class StructuredRecallRequest(BaseModel):
     def _validate_range(self) -> StructuredRecallRequest:
         if self.since is not None and self.until is not None and self.until < self.since:
             raise ValueError("until must be greater than or equal to since")
+        return self
+
+
+class RecallPlan(BaseModel):
+    """Provider-independent output from natural-language recall planning."""
+
+    outcome: RecallPlanOutcome
+    requests: tuple[StructuredRecallRequest, ...] = ()
+
+    @model_validator(mode="after")
+    def _validate_outcome_shape(self) -> RecallPlan:
+        if self.outcome == RecallPlanOutcome.PLANNED and not self.requests:
+            raise ValueError("PLANNED requires at least one structured recall request")
+        if self.outcome != RecallPlanOutcome.PLANNED and self.requests:
+            raise ValueError("UNSUPPORTED and AMBIGUOUS plans cannot contain requests")
         return self
 
 

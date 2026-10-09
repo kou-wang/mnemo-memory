@@ -208,6 +208,38 @@ language query interpretation and answer synthesis are later layers. Semantic
 or vector retrieval remains a fallback or augmentation after structured and
 temporal lookup, not the primary path.
 
+### Natural-language recall planning
+
+`RecallPlanner` is the provider-independent probabilistic interpretation
+boundary in front of structured recall:
+
+```text
+Natural-language question
+  -> RecallPlanner
+  -> StructuredRecallRequest[]
+  -> StructuredRecallService
+  -> grounded Memory evidence
+```
+
+A plan explicitly distinguishes `PLANNED`, `UNSUPPORTED`, and `AMBIGUOUS`.
+Abstention contains no speculative structured requests. The first concrete
+adapter, `OpenAIRecallPlanner`, uses the Responses API with a strict
+provider-local Structured Outputs envelope and maps it into provider-independent
+`RecallPlan` and `StructuredRecallRequest` values. OpenAI SDK types remain inside
+the provider package.
+
+Planning receives an explicit timezone-aware `asked_at` and uses it as its only
+time reference. Simple calendar phrases use the supplied fixed timezone offset:
+"yesterday" is the previous local calendar day, "this week" begins Monday at
+midnight and ends at `asked_at`, and "last month" is the previous local calendar
+month. Other ambiguous temporal language must abstain rather than consult a wall
+clock or guess.
+
+The planner has no repository, entity-resolution, retrieval, persistence,
+lifecycle, truth-evaluation, or answer-synthesis authority. Structured recall
+execution remains deterministic. Semantic fallback and natural-language answer
+synthesis remain later work.
+
 ### Time
 
 `Clock` is an injectable protocol whose `now()` result must be timezone-aware.
@@ -278,7 +310,7 @@ The current interface layer intentionally excludes:
 - fuzzy or semantic entity candidate generation and entity merge operations
 - FastAPI
 - mobile app
-- natural-language recall interpretation or answer synthesis
+- natural-language answer synthesis
 - semantic/vector retrieval and ranking
 
 These may be added only through later scoped Issues after the contracts and

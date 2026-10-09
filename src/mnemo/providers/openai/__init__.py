@@ -6,10 +6,20 @@ from mnemo.providers.openai.extractor import (
     OpenAIProviderError,
     OpenAIResponseError,
 )
+from mnemo.providers.openai.recall_planner import (
+    OpenAIRecallPlanner,
+    OpenAIRecallPlanningError,
+    OpenAIRecallProviderError,
+    OpenAIRecallResponseError,
+)
 
 __all__ = [
     "OpenAIExtractionError",
     "OpenAIExtractor",
     "OpenAIProviderError",
+    "OpenAIRecallPlanner",
+    "OpenAIRecallPlanningError",
+    "OpenAIRecallProviderError",
+    "OpenAIRecallResponseError",
     "OpenAIResponseError",
 ]
