@@ -22,7 +22,7 @@ class EntityResolutionOutcome(StrEnum):
 class EntityResolution(BaseModel):
     """Explicit result of resolving a mention within one user's scope.
 
-    ``UNMATCHED`` is a decision that later orchestration may use to create an
+    ``UNMATCHED`` is a decision that ingestion orchestration may use to create an
     entity; resolution itself never creates or persists one. ``AMBIGUOUS``
     preserves multiple candidates and must never be treated as an auto-merge.
     """

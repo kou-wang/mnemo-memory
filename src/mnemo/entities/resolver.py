@@ -15,7 +15,7 @@ class DeterministicEntityResolver(EntityResolver):
     """Match only normalized canonical names and explicit aliases.
 
     Resolution is read-only. Unmatched entity creation and all merge decisions
-    belong to later orchestration, not this resolver.
+    belong outside this resolver; ingestion orchestration may create an entity.
     """
 
     def __init__(self, repository: EntityRepository) -> None:

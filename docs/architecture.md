@@ -69,8 +69,8 @@ lifecycle authority.
 
 Each candidate carries an unresolved subject mention plus an explicit
 `EntityType` classification, and an object mention must carry its own type when
-present. These types are probabilistic interpretation hints for future entity
-creation; candidates do not contain persisted entity identifiers.
+present. These types are probabilistic interpretation hints for ingestion-time
+entity creation; candidates do not contain persisted entity identifiers.
 
 `OpenAIExtractor` is the first concrete adapter behind this boundary. All SDK,
 Responses API, prompt, and provider response-schema details live under
@@ -105,16 +105,53 @@ fuzzy, embedding, nickname, transliteration, or model-based inference occurs.
 Zero, one, or multiple distinct entity-id matches produce `UNMATCHED`, `MATCHED`,
 or `AMBIGUOUS`, respectively. Ambiguous results retain every distinct candidate
 in stable entity-id order and never select or merge one. Resolution is read-only:
-entity creation and alias changes remain future orchestration responsibilities.
+entity creation belongs to ingestion orchestration, while alias changes remain
+future-scoped.
 Extracted entity types do not participate in this matching decision and must not
 silently disambiguate identities with the same normalized name or alias.
+
+### Ingestion orchestration
+
+`IngestionService` is the first provider-independent write path. It composes the
+existing extractor, resolver, repositories, clock, and lifecycle engine without
+importing OpenAI or SQLAlchemy:
+
+```text
+Capture (persist first)
+  -> Extractor
+  -> resolve subject and object
+  -> safely create unmatched typed entities
+  -> materialize validated Memory with provenance
+  -> LifecycleEngine.reconcile()
+  -> append, no write for NOOP, or atomic CURRENT_STATE supersession
+```
+
+Both mentions are resolved before the service creates any entity for a
+candidate. Ambiguity or a matched-entity type conflict blocks that candidate and
+produces an explicit result; entity type never selects among ambiguous
+identities. Unmatched mentions may create an entity with the extracted type and
+no inferred aliases. Equal normalized subject/object mentions with the same type
+share one new entity when both were unmatched.
+
+The capture repository write intentionally happens before extraction, so raw
+provenance survives provider or later processing failures. Repository methods
+remain the atomic boundaries: the service does not introduce a cross-repository
+unit of work or destructively undo committed records. A successfully created
+entity can remain if a later memory write fails, allowing a retry to resolve and
+reuse it. Current-state retirement and replacement are never split; they use
+`MemoryRepository.supersede_current_state()`.
+
+Retry guarantees assume equivalent extracted candidates. An identical stored
+capture is accepted, created entities are resolved on retry, and lifecycle exact
+duplicates become `NOOP`; varying live model output is not claimed to be fully
+idempotent.
 
 ### Persistence
 
 `CaptureRepository` persists and retrieves captures under explicit user scope.
 `EntityRepository` provides user-scoped entity lookup/listing plus explicit add
-for later orchestration; cross-user reads do not expose records, and cross-user
-writes fail closed.
+for ingestion orchestration; cross-user reads do not expose records, and
+cross-user writes fail closed.
 
 `MemoryRepository` reads active/user-scoped memory and exposes lifecycle writes
 as atomic operations:
