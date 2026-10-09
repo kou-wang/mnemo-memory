@@ -15,6 +15,12 @@ from alembic.config import Config
 from sqlalchemy import Engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
+from mnemo.answers import (
+    NO_EVIDENCE_MESSAGE,
+    RecallAnswerOutcome,
+    RecallAnswerService,
+    SynthesizedAnswer,
+)
 from mnemo.entities import DeterministicEntityResolver
 from mnemo.ingestion import CandidateIngestionOutcome, IngestionService
 from mnemo.lifecycle.engine import LifecycleEngine
@@ -122,6 +128,24 @@ class FakeRecallPlanner:
         return self.plan_result
 
 
+class FakeAnswerSynthesizer:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, tuple[Memory, ...], datetime]] = []
+
+    def synthesize(
+        self,
+        *,
+        question: str,
+        evidence: tuple[Memory, ...],
+        asked_at: datetime,
+    ) -> SynthesizedAnswer:
+        self.calls.append((question, evidence, asked_at))
+        return SynthesizedAnswer(
+            text="Grounded answer from supplied evidence.",
+            cited_memory_ids=tuple(memory.id for memory in evidence),
+        )
+
+
 @dataclass(frozen=True)
 class FixedClock:
     instant: datetime
@@ -225,6 +249,26 @@ def _recall_orchestration(
             RecallPlan(outcome=RecallPlanOutcome.PLANNED, requests=requests)
         ),
         structured_recall_service=_recall_service(entities=entities, queries=queries),
+    )
+
+
+def _answer_service(
+    *,
+    requests: tuple[StructuredRecallRequest, ...],
+    entities: PostgresEntityRepository,
+    queries: PostgresMemoryQueryRepository,
+) -> tuple[RecallAnswerService, FakeAnswerSynthesizer]:
+    synthesizer = FakeAnswerSynthesizer()
+    return (
+        RecallAnswerService(
+            recall_orchestration_service=_recall_orchestration(
+                requests=requests,
+                entities=entities,
+                queries=queries,
+            ),
+            answer_synthesizer=synthesizer,
+        ),
+        synthesizer,
     )
 
 
@@ -1139,3 +1183,335 @@ def test_recall_orchestration_reports_partial_without_cross_user_evidence(
 
     assert missing_result.outcome == RecallExecutionOutcome.NOT_FOUND
     assert missing_result.memories == ()
+
+
+def test_answer_path_returns_cited_parking_evidence_with_provenance_and_isolation(
+    ingestion_repositories: tuple[
+        PostgresCaptureRepository,
+        PostgresEntityRepository,
+        PostgresMemoryRepository,
+    ],
+    query_repository: PostgresMemoryQueryRepository,
+) -> None:
+    _, entities, memories = ingestion_repositories
+    capture = _capture(300, "I parked at D5.")
+    _service(
+        extractor=FakeExtractor(
+            [
+                _candidate(
+                    kind=MemoryKind.CURRENT_STATE,
+                    subject="my car",
+                    subject_type=EntityType.VEHICLE,
+                    predicate="parked_at",
+                    value="D5",
+                )
+            ]
+        ),
+        repositories=ingestion_repositories,
+    ).ingest(capture)
+    foreign_subject = Entity(
+        id=_id(10_300),
+        user_id=OTHER_USER_ID,
+        type=EntityType.VEHICLE,
+        canonical_name="my car",
+    )
+    entities.add(user_id=OTHER_USER_ID, entity=foreign_subject)
+    memories.append(
+        user_id=OTHER_USER_ID,
+        memory=Memory(
+            id=_id(10_301),
+            user_id=OTHER_USER_ID,
+            kind=MemoryKind.CURRENT_STATE,
+            subject_entity_id=foreign_subject.id,
+            predicate="parked_at",
+            value="FOREIGN",
+            observed_at=NOW,
+            memory_key=Memory.build_memory_key(foreign_subject.id, "parked_at"),
+        ),
+    )
+    request = _recall_request(
+        subject="my car",
+        kind=MemoryKind.CURRENT_STATE,
+        predicate="parked_at",
+        mode=RecallMode.CURRENT,
+    )
+    answer_service, synthesizer = _answer_service(
+        requests=(request,),
+        entities=entities,
+        queries=query_repository,
+    )
+
+    result = answer_service.answer(
+        user_id=USER_ID,
+        question="Where did I park?",
+        asked_at=NOW,
+    )
+
+    assert result.outcome == RecallAnswerOutcome.ANSWERED
+    assert [memory.value for memory in result.evidence] == ["D5"]
+    assert result.evidence[0].source_capture_id == capture.id
+    assert result.cited_memory_ids == (result.evidence[0].id,)
+    assert synthesizer.calls[0][1] == result.evidence
+    assert all(memory.user_id == USER_ID for memory in synthesizer.calls[0][1])
+
+
+def test_answer_path_preserves_conflicting_facts_and_multiple_preferences(
+    ingestion_repositories: tuple[
+        PostgresCaptureRepository,
+        PostgresEntityRepository,
+        PostgresMemoryRepository,
+    ],
+    query_repository: PostgresMemoryQueryRepository,
+) -> None:
+    _, entities, _ = ingestion_repositories
+    extractor = FakeExtractor(
+        [
+            _candidate(
+                kind=MemoryKind.FACT,
+                subject="Kevin",
+                subject_type=EntityType.PERSON,
+                predicate="birthday",
+                value="March 12",
+            )
+        ]
+    )
+    ingestion = _service(extractor=extractor, repositories=ingestion_repositories)
+    ingestion.ingest(_capture(310, "Kevin's birthday is March 12."))
+    extractor.candidates = (
+        _candidate(
+            kind=MemoryKind.FACT,
+            subject="Kevin",
+            subject_type=EntityType.PERSON,
+            predicate="birthday",
+            value="March 13",
+        ),
+    )
+    ingestion.ingest(_capture(311, "Kevin's birthday is March 13."))
+    extractor.candidates = tuple(
+        _candidate(
+            kind=MemoryKind.PREFERENCE,
+            subject="Kevin",
+            subject_type=EntityType.PERSON,
+            predicate="likes",
+            value=value,
+        )
+        for value in ("coffee", "jazz")
+    )
+    ingestion.ingest(_capture(312, "Kevin likes coffee and jazz."))
+    requests = (
+        _recall_request(
+            subject="Kevin",
+            kind=MemoryKind.FACT,
+            predicate="birthday",
+            mode=RecallMode.CURRENT,
+        ),
+        _recall_request(
+            subject="Kevin",
+            kind=MemoryKind.PREFERENCE,
+            predicate="likes",
+            mode=RecallMode.ACTIVE,
+        ),
+    )
+    answer_service, synthesizer = _answer_service(
+        requests=requests,
+        entities=entities,
+        queries=query_repository,
+    )
+
+    result = answer_service.answer(
+        user_id=USER_ID,
+        question="When is Kevin's birthday and what does he like?",
+        asked_at=NOW,
+    )
+
+    assert result.outcome == RecallAnswerOutcome.ANSWERED
+    assert {memory.value for memory in result.evidence} == {
+        "March 12",
+        "March 13",
+        "coffee",
+        "jazz",
+    }
+    assert result.cited_memory_ids == tuple(memory.id for memory in result.evidence)
+    assert synthesizer.calls[0][1] == result.evidence
+
+
+def test_answer_path_passes_latest_oil_change_and_only_active_intents(
+    ingestion_repositories: tuple[
+        PostgresCaptureRepository,
+        PostgresEntityRepository,
+        PostgresMemoryRepository,
+    ],
+    query_repository: PostgresMemoryQueryRepository,
+) -> None:
+    _, entities, memories = ingestion_repositories
+    extractor = FakeExtractor(
+        [
+            _candidate(
+                kind=MemoryKind.EVENT,
+                subject="my vehicle",
+                subject_type=EntityType.VEHICLE,
+                predicate="oil_changed",
+                value={"mileage": 40_000},
+                occurred_at=NOW - timedelta(days=30),
+            )
+        ]
+    )
+    ingestion = _service(extractor=extractor, repositories=ingestion_repositories)
+    ingestion.ingest(_capture(320, "Changed oil at 40,000 miles."))
+    extractor.candidates = (
+        _candidate(
+            kind=MemoryKind.EVENT,
+            subject="my vehicle",
+            subject_type=EntityType.VEHICLE,
+            predicate="oil_changed",
+            value={"mileage": 42_000},
+            occurred_at=NOW - timedelta(days=2),
+        ),
+    )
+    ingestion.ingest(_capture(321, "Changed oil at 42,000 miles."))
+    extractor.candidates = tuple(
+        _candidate(
+            kind=MemoryKind.INTENT,
+            subject="me",
+            subject_type=EntityType.PERSON,
+            predicate="buy",
+            value=value,
+        )
+        for value in ("milk", "eggs", "coffee")
+    )
+    intent_result = ingestion.ingest(_capture(322, "Buy milk, eggs, and coffee."))
+    for candidate, status in zip(
+        intent_result.candidate_results[1:],
+        (MemoryStatus.COMPLETED, MemoryStatus.CANCELLED),
+        strict=True,
+    ):
+        assert candidate.memory_id is not None
+        memories.transition_status(
+            user_id=USER_ID,
+            memory_id=candidate.memory_id,
+            expected_status=MemoryStatus.ACTIVE,
+            target_status=status,
+        )
+    requests = (
+        _recall_request(
+            subject="my vehicle",
+            kind=MemoryKind.EVENT,
+            predicate="oil_changed",
+            mode=RecallMode.LATEST,
+        ),
+        _recall_request(
+            subject="me",
+            kind=MemoryKind.INTENT,
+            predicate="buy",
+            mode=RecallMode.ACTIVE,
+        ),
+    )
+    answer_service, synthesizer = _answer_service(
+        requests=requests,
+        entities=entities,
+        queries=query_repository,
+    )
+
+    result = answer_service.answer(
+        user_id=USER_ID,
+        question="When was my latest oil change and what should I buy?",
+        asked_at=NOW,
+    )
+
+    assert result.outcome == RecallAnswerOutcome.ANSWERED
+    assert [memory.value for memory in result.evidence] == [
+        {"mileage": 42_000},
+        "milk",
+    ]
+    assert synthesizer.calls[0][1] == result.evidence
+
+
+def test_answer_path_missing_subject_bypasses_synthesizer(
+    ingestion_repositories: tuple[
+        PostgresCaptureRepository,
+        PostgresEntityRepository,
+        PostgresMemoryRepository,
+    ],
+    query_repository: PostgresMemoryQueryRepository,
+) -> None:
+    _, entities, _ = ingestion_repositories
+    request = _recall_request(
+        subject="my passport",
+        kind=MemoryKind.CURRENT_STATE,
+        predicate="located_at",
+        mode=RecallMode.CURRENT,
+    )
+    answer_service, synthesizer = _answer_service(
+        requests=(request,),
+        entities=entities,
+        queries=query_repository,
+    )
+
+    result = answer_service.answer(
+        user_id=USER_ID,
+        question="Where is my passport?",
+        asked_at=NOW,
+    )
+
+    assert result.outcome == RecallAnswerOutcome.NOT_FOUND
+    assert result.text == NO_EVIDENCE_MESSAGE
+    assert result.evidence == ()
+    assert synthesizer.calls == []
+
+
+def test_answer_path_partial_recall_stays_partial_and_synthesizes_only_hit(
+    ingestion_repositories: tuple[
+        PostgresCaptureRepository,
+        PostgresEntityRepository,
+        PostgresMemoryRepository,
+    ],
+    query_repository: PostgresMemoryQueryRepository,
+) -> None:
+    _, entities, _ = ingestion_repositories
+    _service(
+        extractor=FakeExtractor(
+            [
+                _candidate(
+                    kind=MemoryKind.CURRENT_STATE,
+                    subject="my car",
+                    subject_type=EntityType.VEHICLE,
+                    predicate="parked_at",
+                    value="E8",
+                )
+            ]
+        ),
+        repositories=ingestion_repositories,
+    ).ingest(_capture(330, "I parked at E8."))
+    requests = (
+        _recall_request(
+            subject="my car",
+            kind=MemoryKind.CURRENT_STATE,
+            predicate="parked_at",
+            mode=RecallMode.CURRENT,
+        ),
+        _recall_request(
+            subject="my passport",
+            kind=MemoryKind.CURRENT_STATE,
+            predicate="located_at",
+            mode=RecallMode.CURRENT,
+        ),
+    )
+    answer_service, synthesizer = _answer_service(
+        requests=requests,
+        entities=entities,
+        queries=query_repository,
+    )
+
+    result = answer_service.answer(
+        user_id=USER_ID,
+        question="Where are my car and passport?",
+        asked_at=NOW,
+    )
+
+    assert result.outcome == RecallAnswerOutcome.PARTIAL
+    assert [execution.result.outcome for execution in result.recall_result.executions] == [
+        RecallOutcome.FOUND,
+        RecallOutcome.NOT_FOUND,
+    ]
+    assert [memory.value for memory in result.evidence] == ["E8"]
+    assert synthesizer.calls[0][1] == result.evidence

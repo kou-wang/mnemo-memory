@@ -58,8 +58,10 @@ structured recall requests, with explicit unsupported/ambiguous abstention and
 relative time anchored only to the supplied question timestamp. Issue #24 adds
 provider-independent execution of those exact requests through deterministic
 structured recall, retaining per-request results and grounded provenance while
-preserving planner abstention. Answer synthesis, category-aware aggregation, and
-semantic/hybrid retrieval remain later work.
+preserving planner abstention. Issue #26 adds grounded answer synthesis over only
+that evidence, with deterministic abstention, validated memory citations,
+conflict preservation, and an explicitly partial answer path. Category-aware
+aggregation and semantic/hybrid retrieval remain later work.
 Semantic/vector lookup is a fallback or augmentation after structured retrieval,
 not the primary path.
 

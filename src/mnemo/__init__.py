@@ -1,5 +1,13 @@
 """Mnemo temporal memory engine."""
 
+from mnemo.answers import (
+    NO_EVIDENCE_MESSAGE,
+    RecallAnswerInvariantError,
+    RecallAnswerOutcome,
+    RecallAnswerResult,
+    RecallAnswerService,
+    SynthesizedAnswer,
+)
 from mnemo.entities import DeterministicEntityResolver, normalize_entity_name
 from mnemo.ingestion import (
     CandidateIngestionOutcome,
@@ -10,6 +18,7 @@ from mnemo.ingestion import (
     IngestionService,
 )
 from mnemo.interfaces import (
+    AnswerSynthesizer,
     CaptureRepository,
     Clock,
     EntityRepository,
@@ -47,6 +56,7 @@ from mnemo.recall import (
 )
 
 __all__ = [
+    "AnswerSynthesizer",
     "CandidateMemory",
     "CandidateIngestionOutcome",
     "CandidateIngestionResult",
@@ -75,8 +85,13 @@ __all__ = [
     "MemoryQueryOrder",
     "MemoryQueryRepository",
     "MemoryStatus",
+    "NO_EVIDENCE_MESSAGE",
     "RepositoryInvariantError",
     "RecallInvariantError",
+    "RecallAnswerInvariantError",
+    "RecallAnswerOutcome",
+    "RecallAnswerResult",
+    "RecallAnswerService",
     "RecallExecutionOutcome",
     "RecallExecutionResult",
     "RecallMode",
@@ -91,5 +106,6 @@ __all__ = [
     "StructuredRecallRequest",
     "StructuredRecallResult",
     "StructuredRecallService",
+    "SynthesizedAnswer",
     "normalize_entity_name",
 ]

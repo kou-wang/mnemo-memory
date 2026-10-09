@@ -4,9 +4,9 @@ Last updated: 2026-10-09
 
 ## Current phase
 
-**Recall execution orchestration (Issue #24)**
+**Grounded answer synthesis (Issue #26)**
 
-Working branch: `feat/recall-orchestration`
+Working branch: `feat/grounded-answer-synthesis`
 
 Sprint 1 PR: **#6 — merged**
 
@@ -28,7 +28,9 @@ Structured and temporal recall PR: **#21 — merged**
 
 Natural-language recall planner PR: **#23 — merged**
 
-Issue #24 implementation: **complete; awaiting maintainer review**
+Recall execution orchestration PR: **#25 — merged**
+
+Issue #26 implementation: **complete; awaiting maintainer review**
 
 ## Completed
 
@@ -208,11 +210,9 @@ Implemented:
 - strict no-`oneOf` schema regression coverage and sanitized provider failures
 - deterministic offline recall-planning evaluation seed
 
-## In progress
-
 ### Issue #24 — Recall execution orchestration
 
-Implementation complete; awaiting maintainer review.
+Completed and reviewed.
 
 Implemented:
 - provider-independent planner-to-structured-recall execution
@@ -224,15 +224,31 @@ Implemented:
 - propagated planner/provider and structured-recall invariant failures
 - real PostgreSQL end-to-end coverage using a fake planner
 
+## In progress
+
+### Issue #26 — Grounded answer synthesis
+
+Implementation complete; awaiting maintainer review.
+
+Implemented:
+- provider-independent `AnswerSynthesizer` and `RecallAnswerService`
+- deterministic no-evidence and abstention handling without synthesis calls
+- exact grounded evidence handoff for found and partial recall
+- validated memory-id citations with fail-closed foreign/unknown citation checks
+- preserved conflicting facts, multiple preferences, ordering, and provenance
+- OpenAI Responses API strict Structured Outputs adapter with sanitized failures
+- minimal provider evidence payloads that exclude user ids and internal objects
+- offline provider/schema coverage and real PostgreSQL end-to-end answer coverage
+
 ## Next
 
-1. Review Issue #24 and its dedicated PR
-2. Later semantic retrieval, answer synthesis, and evaluation work
+1. Review Issue #26 and its dedicated PR
+2. Later semantic retrieval and evaluation work
 3. Consumer/mobile application work
 
 ## Current constraints
 
-Issue #24 adds only provider-independent recall execution orchestration and must not add:
+Issue #26 adds only grounded answer synthesis over deterministic recall and must not add:
 - FastAPI
 - pgvector
 - Redis
@@ -241,8 +257,9 @@ Issue #24 adds only provider-independent recall execution orchestration and must
 - billing
 - notifications
 - lifecycle semantic changes
-- LLM answer synthesis or an aggregation engine
+- an aggregation engine or answer-time repository access
 - category-aware broad event recall
+- web search
 - embeddings, pgvector, or semantic/hybrid ranking
 - entity creation, merging, or type-based identity disambiguation
 - automatic expiration mutation

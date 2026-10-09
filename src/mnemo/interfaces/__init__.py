@@ -1,5 +1,6 @@
-"""Provider-independent boundaries for extraction, resolution, time, and storage."""
+"""Provider-independent boundaries for interpretation, synthesis, time, and storage."""
 
+from mnemo.interfaces.answers import AnswerSynthesizer
 from mnemo.interfaces.clock import Clock
 from mnemo.interfaces.entities import (
     EntityResolution,
@@ -17,6 +18,7 @@ from mnemo.interfaces.repositories import (
 )
 
 __all__ = [
+    "AnswerSynthesizer",
     "CaptureRepository",
     "Clock",
     "EntityResolution",
