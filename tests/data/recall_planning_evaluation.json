@@ -52,8 +52,8 @@
     "name": "workouts_this_week",
     "question": "What workouts did I log this week?",
     "asked_at": "2026-10-09T15:30:00+00:00",
-    "expected_outcome": "PLANNED",
-    "expected_requests": [{"subject": "me", "expected_subject_type": "person", "kind": "EVENT", "predicate": null, "mode": "HISTORY", "since": "2026-10-05T00:00:00+00:00", "until": "2026-10-09T15:30:00+00:00"}]
+    "expected_outcome": "UNSUPPORTED",
+    "expected_requests": []
   },
   {
     "name": "bench_yesterday",
@@ -66,8 +66,8 @@
     "name": "maintenance_last_month",
     "question": "What maintenance did I record last month?",
     "asked_at": "2026-10-09T15:30:00+00:00",
-    "expected_outcome": "PLANNED",
-    "expected_requests": [{"subject": "my vehicle", "expected_subject_type": "vehicle", "kind": "EVENT", "predicate": null, "mode": "HISTORY", "since": "2026-09-01T00:00:00+00:00", "until": "2026-09-30T23:59:59.999999+00:00"}]
+    "expected_outcome": "UNSUPPORTED",
+    "expected_requests": []
   },
   {
     "name": "unsupported_semantic",

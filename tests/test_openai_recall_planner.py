@@ -210,48 +210,15 @@ def test_canonical_questions_map_to_structured_recall_requests(
     )
 
 
-@pytest.mark.parametrize(
-    ("question", "subject", "subject_type", "predicate", "since", "until"),
-    [
-        (
-            "What workouts did I log this week?",
-            "me",
-            EntityType.PERSON,
-            None,
-            datetime(2026, 10, 5, tzinfo=UTC),
-            ASKED_AT,
-        ),
-        (
-            "What did I bench yesterday?",
-            "me",
-            EntityType.PERSON,
-            "bench_press",
-            datetime(2026, 10, 8, tzinfo=UTC),
-            datetime(2026, 10, 8, 23, 59, 59, 999999, tzinfo=UTC),
-        ),
-        (
-            "What maintenance did I record last month?",
-            "my vehicle",
-            EntityType.VEHICLE,
-            None,
-            datetime(2026, 9, 1, tzinfo=UTC),
-            datetime(2026, 9, 30, 23, 59, 59, 999999, tzinfo=UTC),
-        ),
-    ],
-)
-def test_relative_time_is_mapped_from_supplied_asked_at(
-    question: str,
-    subject: str,
-    subject_type: EntityType,
-    predicate: str | None,
-    since: datetime,
-    until: datetime,
-) -> None:
+def test_relative_time_is_mapped_from_supplied_asked_at() -> None:
+    question = "What did I bench yesterday?"
+    since = datetime(2026, 10, 8, tzinfo=UTC)
+    until = datetime(2026, 10, 8, 23, 59, 59, 999999, tzinfo=UTC)
     provider_request = _provider_request(
-        subject=subject,
-        subject_type=subject_type,
+        subject="me",
+        subject_type=EntityType.PERSON,
         kind=MemoryKind.EVENT,
-        predicate=predicate,
+        predicate="bench_press",
         mode=RecallMode.HISTORY,
         since=since,
         until=until,
@@ -267,6 +234,20 @@ def test_relative_time_is_mapped_from_supplied_asked_at(
     sent_input = cast(str, client.responses.calls[0]["input"])
     assert ASKED_AT.isoformat() in sent_input
     assert question in sent_input
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "What workouts did I log this week?",
+        "What maintenance did I record last month?",
+    ],
+)
+def test_broad_event_class_abstains_instead_of_using_no_predicate(question: str) -> None:
+    plan, _ = _run_plan(question, outcome=RecallPlanOutcome.UNSUPPORTED)
+
+    assert plan.outcome == RecallPlanOutcome.UNSUPPORTED
+    assert plan.requests == ()
 
 
 def test_blank_question_and_naive_asked_at_are_rejected_before_provider_call() -> None:
@@ -425,6 +406,8 @@ def test_prompt_documents_abstention_authority_and_canonical_time_rules() -> Non
     assert "never use a wall clock" in prompt
     assert "monday" in prompt
     assert "synthesize" in prompt
+    assert "event with a null" in prompt
+    assert "broader than" in prompt
 
 
 def test_recall_planning_evaluation_seed_covers_canonical_questions() -> None:

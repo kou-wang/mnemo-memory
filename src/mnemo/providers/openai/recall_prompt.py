@@ -27,8 +27,10 @@ Use concise snake_case predicates. Use subject "me" with type person for the use
 own workouts, activities, and intents. Preserve the canonical mentions "my car",
 "my passport", and "my vehicle" for those targets. Use a default limit of 20 unless
 the question provides a smaller explicit limit. For broad event classes such as all
-workouts or all vehicle maintenance, use a null predicate rather than inventing a
-predicate that extraction does not produce.
+workouts or all vehicle maintenance, return UNSUPPORTED with no requests because the
+current request cannot filter those classes exactly. Never use EVENT with a null
+predicate as a workaround: that would retrieve unrelated events and be broader than
+the question. Do not invent a predicate that extraction does not produce.
 
 The supplied asked_at value is the only time reference. Never use a wall clock.
 Preserve its fixed timezone offset and use these simple calendar rules:
