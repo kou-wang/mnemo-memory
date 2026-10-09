@@ -1,6 +1,14 @@
 """Mnemo temporal memory engine."""
 
 from mnemo.entities import DeterministicEntityResolver, normalize_entity_name
+from mnemo.ingestion import (
+    CandidateIngestionOutcome,
+    CandidateIngestionResult,
+    EntityMentionRole,
+    IngestionInvariantError,
+    IngestionResult,
+    IngestionService,
+)
 from mnemo.interfaces import (
     CaptureRepository,
     Clock,
@@ -21,6 +29,8 @@ from mnemo.models.types import MemoryKind, MemoryStatus
 
 __all__ = [
     "CandidateMemory",
+    "CandidateIngestionOutcome",
+    "CandidateIngestionResult",
     "Capture",
     "CaptureRepository",
     "Clock",
@@ -31,7 +41,11 @@ __all__ = [
     "EntityRepository",
     "EntityResolver",
     "EntityType",
+    "EntityMentionRole",
     "Extractor",
+    "IngestionInvariantError",
+    "IngestionResult",
+    "IngestionService",
     "LifecycleAction",
     "LifecycleDecision",
     "LifecycleEngine",

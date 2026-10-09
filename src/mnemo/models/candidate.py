@@ -25,7 +25,7 @@ class CandidateMemory(BaseModel):
 
     One capture may yield zero, one, or many candidates. ``subject`` and the
     optional ``object`` remain unresolved text mentions, while their entity
-    types are probabilistic extraction hints for future entity creation.
+    types are probabilistic extraction hints for ingestion-time entity creation.
     Identity resolution happens later and must not treat a type hint as an
     identity. ``subject`` and ``predicate`` must be non-blank. Temporal fields
     are optional but, when present, must be internally consistent (see

@@ -1,12 +1,12 @@
 # Project Status
 
-Last updated: 2026-10-08
+Last updated: 2026-10-09
 
 ## Current phase
 
-**Extraction — Typed entity mentions (Issue #16)**
+**Ingestion orchestration (Issue #18)**
 
-Working branch: `feat/typed-entity-mentions`
+Working branch: `feat/ingestion-orchestration`
 
 Sprint 1 PR: **#6 — merged**
 
@@ -20,7 +20,9 @@ Deterministic entity resolution PR: **#13 — merged**
 
 PostgreSQL persistence PR: **#15 — merged**
 
-Issue #16 implementation: **complete; awaiting maintainer review**
+Typed entity mentions PR: **#17 — merged**
+
+Issue #18 implementation: **complete; awaiting maintainer review**
 
 ## Completed
 
@@ -148,11 +150,9 @@ Implemented:
 - transactional, row-locked current-state supersession with rollback guarantees
 - real PostgreSQL integration coverage in the Python 3.11/3.12 CI matrix
 
-## In progress
-
 ### Issue #16 — Typed entity mentions
 
-Implementation complete; awaiting maintainer review.
+Completed and reviewed.
 
 Implemented:
 - required `subject_type` and object/object-type consistency on `CandidateMemory`
@@ -162,15 +162,31 @@ Implemented:
 - preserved recursive `anyOf` schema compatibility with no `oneOf`
 - unchanged deterministic name/alias entity resolution behavior
 
+## In progress
+
+### Issue #18 — Ingestion orchestration
+
+Implementation complete; awaiting maintainer review.
+
+Implemented:
+- provider-independent capture-to-memory write-path orchestration
+- capture-first durable provenance and conflict-safe retry handling
+- candidate-safe entity resolution and typed unmatched-entity creation
+- explicit ambiguity/type-conflict/no-op/persisted candidate outcomes
+- deterministic CandidateMemory-to-Memory mapping with injected time
+- LifecycleEngine-owned append/no-op/supersession decisions
+- atomic repository current-state replacement without a global unit of work
+- equivalent-retry deduplication and real PostgreSQL end-to-end coverage
+
 ## Next
 
-1. Review Issue #16 and its dedicated PR
-2. Later ingestion orchestration, retrieval, and evaluation work
+1. Review Issue #18 and its dedicated PR
+2. Later retrieval and evaluation work
 3. Consumer/mobile application work
 
 ## Current constraints
 
-Issue #16 adds only typed unresolved entity mentions to extraction and must not add:
+Issue #18 adds only internal ingestion orchestration and must not add:
 - FastAPI
 - pgvector
 - Redis
@@ -180,8 +196,9 @@ Issue #16 adds only typed unresolved entity mentions to extraction and must not 
 - notifications
 - lifecycle semantic changes
 - retrieval, embeddings, or semantic indexing
-- capture-to-memory orchestration
-- automatic entity creation, merging, or type-based identity disambiguation
+- entity merging or type-based identity disambiguation
+- lifecycle-command interpretation
+- a global unit of work or destructive cross-repository rollback
 
 ## Product direction
 

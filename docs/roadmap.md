@@ -41,18 +41,25 @@ Issue #14 establishes PostgreSQL through SQLAlchemy 2.x and psycopg 3, with
 Alembic migrations and database-enforced current-state/user-scope invariants.
 Vector and semantic indexing choices remain `TBD`.
 
-## 7. Retrieval and temporal recall
+## 7. Ingestion orchestration
+
+Issue #18 connects capture-first provenance, typed entity resolution/creation,
+validated memory materialization, deterministic lifecycle reconciliation, and
+repository writes. It is the internal write-path bridge before recall and does
+not add lifecycle-command interpretation or a cross-repository unit of work.
+
+## 8. Retrieval and temporal recall
 
 Support structured lookup, temporal lookup, aggregation, and semantic/hybrid
 retrieval where necessary, with grounded synthesized answers and abstention.
 
-## 8. Evaluation
+## 9. Evaluation
 
 Turn canonical scenarios into repeatable extraction, lifecycle, retrieval,
 temporal-query, and end-to-end evaluation datasets and gates. Metrics and
 thresholds beyond established lifecycle coverage are `TBD`.
 
-## 9. Consumer and mobile application work
+## 10. Consumer and mobile application work
 
 Build the low-friction consumer experience on top of the reusable engine after
 the engine boundaries are stable. The established direction is iOS-first using
