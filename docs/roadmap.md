@@ -50,8 +50,12 @@ not add lifecycle-command interpretation or a cross-repository unit of work.
 
 ## 8. Retrieval and temporal recall
 
-Support structured lookup, temporal lookup, aggregation, and semantic/hybrid
-retrieval where necessary, with grounded synthesized answers and abstention.
+Issue #20 adds the first deterministic structured and temporal recall layer:
+explicit subject resolution outcomes, current/active/history/latest modes,
+temporal validity, stable PostgreSQL queries, and provenance-preserving evidence.
+Natural-language interpretation, aggregation, grounded synthesis, and
+semantic/hybrid retrieval remain later work. Semantic/vector lookup is a
+fallback or augmentation after structured retrieval, not the primary path.
 
 ## 9. Evaluation
 

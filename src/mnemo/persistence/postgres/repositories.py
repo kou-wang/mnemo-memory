@@ -5,10 +5,11 @@ from __future__ import annotations
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session, sessionmaker
 
+from mnemo.interfaces.queries import MemoryQuery, MemoryQueryOrder, MemoryQueryRepository
 from mnemo.interfaces.repositories import (
     CaptureRepository,
     EntityRepository,
@@ -275,3 +276,59 @@ class PostgresMemoryRepository(_PostgresRepository, MemoryRepository):
     def _require_owner(*, user_id: str, memory: Memory) -> None:
         if memory.user_id != user_id:
             raise RepositoryInvariantError("memory belongs to a different user")
+
+
+class PostgresMemoryQueryRepository(_PostgresRepository, MemoryQueryRepository):
+    """PostgreSQL structured/temporal memory reads with stable ordering."""
+
+    def query(self, query: MemoryQuery) -> Sequence[Memory]:
+        statement = select(MemoryRow).where(MemoryRow.user_id == query.user_id)
+        if query.statuses is not None:
+            statement = statement.where(
+                MemoryRow.status.in_(tuple(status.value for status in query.statuses))
+            )
+        if query.kind is not None:
+            statement = statement.where(MemoryRow.kind == query.kind.value)
+        if query.subject_entity_id is not None:
+            statement = statement.where(MemoryRow.subject_entity_id == query.subject_entity_id)
+        if query.predicate is not None:
+            statement = statement.where(MemoryRow.predicate == query.predicate)
+        if query.object_entity_id is not None:
+            statement = statement.where(MemoryRow.object_entity_id == query.object_entity_id)
+        if query.occurred_at_from is not None:
+            statement = statement.where(MemoryRow.occurred_at >= query.occurred_at_from)
+        if query.occurred_at_until is not None:
+            statement = statement.where(MemoryRow.occurred_at <= query.occurred_at_until)
+        if query.observed_at_from is not None:
+            statement = statement.where(MemoryRow.observed_at >= query.observed_at_from)
+        if query.observed_at_until is not None:
+            statement = statement.where(MemoryRow.observed_at <= query.observed_at_until)
+
+        event_time = func.coalesce(MemoryRow.occurred_at, MemoryRow.observed_at)
+        if query.event_time_from is not None:
+            statement = statement.where(event_time >= query.event_time_from)
+        if query.event_time_until is not None:
+            statement = statement.where(event_time <= query.event_time_until)
+        if query.valid_at is not None:
+            statement = statement.where(
+                or_(MemoryRow.valid_from.is_(None), MemoryRow.valid_from <= query.valid_at),
+                or_(MemoryRow.valid_until.is_(None), MemoryRow.valid_until >= query.valid_at),
+                or_(MemoryRow.expires_at.is_(None), MemoryRow.expires_at > query.valid_at),
+            )
+
+        if query.order == MemoryQueryOrder.OBSERVED_AT_ASC:
+            statement = statement.order_by(MemoryRow.observed_at, MemoryRow.id)
+        elif query.order == MemoryQueryOrder.OBSERVED_AT_DESC:
+            statement = statement.order_by(MemoryRow.observed_at.desc(), MemoryRow.id.desc())
+        else:
+            statement = statement.order_by(
+                event_time.desc(), MemoryRow.observed_at.desc(), MemoryRow.id.desc()
+            )
+        statement = statement.limit(query.limit)
+
+        try:
+            with self._sessions() as session:
+                rows = session.scalars(statement).all()
+        except OperationalError:
+            raise PostgresRepositoryError("PostgreSQL memory query failed") from None
+        return tuple(memory_from_row(row) for row in rows)
